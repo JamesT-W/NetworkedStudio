@@ -170,8 +170,8 @@ void loop(void)
     //// ***********************************************************************
 
     readMPU9150();          //// reads compass, accelerometer and gyroscope data
-    readWeatherSi7020();    //// reads pressure and altitude sensor data
-    readWeatherSi1132();    //// reads air temperaure and humidity sensor
+    readWeatherSi7020();    //// reads humidity, temperature.
+    readWeatherSi1132();    //// reads light sensor (UV, IF, visible)
 
 
     float pitch = getXTilt(ax, az);       //// returns device tilt along x-axis
@@ -188,6 +188,8 @@ void loop(void)
     //// reads and returns sound level
     float soundLevel = readSoundLevel();
 
+
+    /* Get and print X and Y Tilt
     Serial.print("XTilt: "); Serial.print(getXTilt(ax, az)); Serial.print(" Degres\t");
     Serial.print("YTilt: "); Serial.print(getYTilt(ay, az)); Serial.println(" Degrees");
 
@@ -196,14 +198,23 @@ void loop(void)
 
     Particle.publish("TiltData",tiltString, PRIVATE); // Tilt
     delay(PUBLISH_DELAY);
+    */
 
-    String tempStr = "";
-    String sensorString = tempStr+"Humidity: "+Si7020Humidity;
-    Particle.publish("Humidity:", sensorString, PRIVATE); // Humidity
+    String blank = ""; //temporary
+    //Get and publish Humidity
+    String humidString = blank+"Humidity: "+Si7020Humidity;
+    Particle.publish("Hdata:", humidString, PRIVATE);
     delay(PUBLISH_DELAY);
 
-    String sensorTempString = tempStr+"Temperature: "+Si7020Temperature;
-    Particle.publish("Temperature:", sensorTempString, PRIVATE); // temperature
+    //Get and publish temperature
+    String tempString = blank+"Temperature: "+Si7020Temperature;
+    Particle.publish("Tdata:", tempString, PRIVATE);
+
+    //Get and publish light
+    String lightString = blank+"Lightlevel: " +Si1132Visible;
+    Particle.publish("Ldata:", lightString, PRIVATE);
+
+    delay(PUBLISH_DELAY); //chill with the updates
   }
 
 void readMPU9150()
