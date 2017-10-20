@@ -11,6 +11,8 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
+int PUBLISH_DELAY = 100; //adds a delay after publishing so that the following publishes print correctly
+
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
 int EVENTSDELAY = 1000; //// milliseconds (runs x10)
 int OTAUPDDELAY = 7000; //// milliseconds (runs x1)
@@ -192,21 +194,16 @@ void loop(void)
     String tiltString = "";
     tiltString = tiltString+"XTilt: "+getXTilt(ax, az)+" Degrees\t"+"YTilt: "+getYTilt(ay, az)+" Degrees";
 
-    //Particle.publish("TiltData",tiltString, PRIVATE); // Tilt
+    Particle.publish("TiltData",tiltString, PRIVATE); // Tilt
+    delay(PUBLISH_DELAY);
 
     String tempStr = "";
-    // String sensorString = tempStr+"Humidity: "+Si7020Humidity;
-    // Particle.publish("Humidity:", sensorString, PRIVATE); // Humidity
+    String sensorString = tempStr+"Humidity: "+Si7020Humidity;
+    Particle.publish("Humidity:", sensorString, PRIVATE); // Humidity
+    delay(PUBLISH_DELAY);
 
     String sensorTempString = tempStr+"Temperature: "+Si7020Temperature;
     Particle.publish("Temperature:", sensorTempString, PRIVATE); // temperature
-
-    String lightStr = tempStr + "Light: " + Si1132Visible;
-    Particle.publish("Light:", lightStr, PRIVATE);
-
-    // String soundStr = tempStr + "Sound: " + soundLevel;
-    // Particle.publish("Sound:", soundStr, PRIVATE);
-
   }
 
 void readMPU9150()
