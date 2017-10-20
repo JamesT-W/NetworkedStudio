@@ -192,11 +192,14 @@ void loop(void)
     String tiltString = "";
     tiltString = tiltString+"XTilt: "+getXTilt(ax, az)+" Degrees\t"+"YTilt: "+getYTilt(ay, az)+" Degrees";
 
-    Particle.publish("TiltData",tiltString, PRIVATE);
+    Particle.publish("TiltData",tiltString, PRIVATE); // Tilt
 
     String tempStr = "";
     String sensorString = tempStr+"Humidity: "+Si7020Humidity;
-    Particle.publish("Humidity:", sensorString, PRIVATE);
+    Particle.publish("Humidity:", sensorString, PRIVATE); // Humidity
+
+    String sensorTempString = tempStr+"Temperature: "+Si7020Temperature;
+    Particle.publish("Temperature:", sensorTempString, PRIVATE); // temperature
   }
 
 void readMPU9150()
