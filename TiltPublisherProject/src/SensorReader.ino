@@ -11,7 +11,9 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-int PUBLISH_DELAY = 100; //adds a delay after publishing so that the following publishes print correctly
+const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
+
+int PUBLISH_DELAY = 60000; //adds a delay after publishing so that the following publishes print correctly (ms)
 
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
 int EVENTSDELAY = 1000; //// milliseconds (runs x10)
@@ -215,6 +217,16 @@ void loop(void)
     Particle.publish("Ldata:", lightString, PRIVATE);
 
     delay(PUBLISH_DELAY); //chill with the updates
+
+    /*
+    Publish to Thingspeak and populate fields 1,2,3 accordingly
+    we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
+    on the particle dashboard.
+    */
+    Particle.publish("thingSpeakWrite_All", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
+       "\"2\": \"" + String(Si7020Humidity) + "\"," +
+       "\"3\": \"" + String(Si1132Visible) + "\"," +
+       "\"k\": \"" + key + "\" }", 60, PRIVATE);
   }
 
 void readMPU9150()
