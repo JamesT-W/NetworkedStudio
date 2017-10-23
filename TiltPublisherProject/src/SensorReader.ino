@@ -13,12 +13,12 @@
 
 const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
 
-int PUBLISH_DELAY = 60000; //adds a delay after publishing so that the following publishes print correctly (ms)
-
+//int PUBLISH_DELAY = 3600000; //adds a delay after publishing so that the following publishes print correctly (ms)
+int PHOTON_SLEEP = 10;
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
-int EVENTSDELAY = 1000; //// milliseconds (runs x10)
-int OTAUPDDELAY = 7000; //// milliseconds (runs x1)
-int SLEEP_DELAY = 0;    //// 40 seconds (runs x1) - should get about 24 hours on 2100mAH, 0 to disable and use RELAX_DELAY instead
+//int EVENTSDELAY = 1000; //// milliseconds (runs x10)
+//int OTAUPDDELAY = 7000; //// milliseconds (runs x1)
+//int SLEEP_DELAY = 0;    //// 40 seconds (runs x1) - should get about 24 hours on 2100mAH, 0 to disable and use RELAX_DELAY instead
 String SLEEP_DELAY_MIN = "15"; // seconds - easier to store as string then convert to int
 String SLEEP_DELAY_STATUS = "OK"; // always OK to start with
 int RELAX_DELAY = 5; // seconds (runs x1) - no power impact, just idle/relaxing
@@ -223,10 +223,12 @@ void loop(void)
        "\"3\": \"" + String(Si1132Visible) + "\"," +
        "\"k\": \"" + key + "\" }", 60, PRIVATE);
 
+    // Power Down Sensors
     digitalWrite(I2CEN, LOW);
     digitalWrite(ALGEN, LOW);
 
-    delay(PUBLISH_DELAY); //chill with the updates
+    //delay(PUBLISH_DELAY); //chill with the updates
+    System.sleep(PHOTON_SLEEP);
   }
 
 void readMPU9150()
