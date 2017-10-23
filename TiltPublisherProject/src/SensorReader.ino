@@ -213,9 +213,6 @@ void loop(void)
     //Get and publish light
     String lightString = blank+"Lightlevel: " +Si1132Visible;
     Particle.publish("Ldata:", lightString, PRIVATE);
-
-    delay(PUBLISH_DELAY); //chill with the updates
-
     /*
     Publish to Thingspeak and populate fields 1,2,3 accordingly
     we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
@@ -225,6 +222,11 @@ void loop(void)
        "\"2\": \"" + String(Si7020Humidity) + "\"," +
        "\"3\": \"" + String(Si1132Visible) + "\"," +
        "\"k\": \"" + key + "\" }", 60, PRIVATE);
+
+    digitalWrite(I2CEN, LOW);
+    digitalWrite(ALGEN, LOW);
+
+    delay(PUBLISH_DELAY); //chill with the updates
   }
 
 void readMPU9150()
