@@ -186,7 +186,6 @@ void loop(void)
     float accelXYZ =  getAccelXYZ(ax, ay, az);   //returns the vector sum of the
                                           //acceleration along x, y and z axes
 
-
     //// reads and returns sound level
     float soundLevel = readSoundLevel();
 
@@ -206,7 +205,6 @@ void loop(void)
     //Get and publish Humidity
     String humidString = blank+"Humidity: "+Si7020Humidity;
     Particle.publish("Hdata:", humidString, PRIVATE);
-    delay(PUBLISH_DELAY);
 
     //Get and publish temperature
     String tempString = blank+"Temperature: "+Si7020Temperature;
