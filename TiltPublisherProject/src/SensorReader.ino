@@ -14,7 +14,7 @@
 const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
 
 int PUBLISH_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
-int PHOTON_SLEEP = 2;
+long PHOTON_SLEEP = 30; // seconds
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
 //int EVENTSDELAY = 1000; //// milliseconds (runs x10)
 //int OTAUPDDELAY = 7000; //// milliseconds (runs x1)
@@ -226,8 +226,8 @@ void loop(void)
     delay(PUBLISH_DELAY); //Stay awake for a while
 
     // Power Down Sensors
-    digitalWrite(I2CEN, LOW);
-    digitalWrite(ALGEN, LOW);
+    //digitalWrite(I2CEN, LOW);
+    //digitalWrite(ALGEN, LOW);
 
     interrupts();
     System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
