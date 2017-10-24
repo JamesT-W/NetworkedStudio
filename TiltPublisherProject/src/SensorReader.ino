@@ -3,7 +3,7 @@
 #include "Si70xx.h"
 #include "math.h"
 
-//// ***************************************************************************
+//https://thingspeak.com/channels/350722
 
 //// Initialize application variables
 #define RAD_TO_DEGREES 57.2957795131
@@ -11,8 +11,9 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
+const String key = "S2D4YAIF6ACZHHMG"; //Thingspeak API Key
 
+int PUBLISH_DELAY = 400; //adds a delay to make publishing less frequent
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
@@ -190,47 +191,59 @@ void loop(void)
     float soundLevel = readSoundLevel();
 
 
-    /* Get and print X and Y Tilt
-    Serial.print("XTilt: "); Serial.print(getXTilt(ax, az)); Serial.print(" Degres\t");
+    // Get and print X and Y Tilt
+    Serial.print("XTilt: "); Serial.print(getXTilt(ax, az)); Serial.print(" Degrees\t");
     Serial.print("YTilt: "); Serial.print(getYTilt(ay, az)); Serial.println(" Degrees");
 
     String tiltString = "";
-    tiltString = tiltString+"XTilt: "+getXTilt(ax, az)+" Degrees\t"+"YTilt: "+getYTilt(ay, az)+" Degrees";
+    tiltString = tiltString+"XTilt: "+pitch+" Degrees\t"+"YTilt: "+roll+" Degrees";
 
-    Particle.publish("TiltData",tiltString, PRIVATE); // Tilt
-    delay(PUBLISH_DELAY);
-    */
+    //Particle.publish("TiltData",tiltString, PRIVATE); // Tilt
 
-    String blank = ""; //temporary
-    //Get and publish Humidity
-    String humidString = blank+"Humidity: "+Si7020Humidity;
-    Particle.publish("Hdata:", humidString, PRIVATE);
-
-    //Get and publish temperature
-    String tempString = blank+"Temperature: "+Si7020Temperature;
-    Particle.publish("Tdata:", tempString, PRIVATE);
-
-    //Get and publish light
-    String lightString = blank+"Lightlevel: " +Si1132Visible;
-    Particle.publish("Ldata:", lightString, PRIVATE);
-    /*
+  /*
     Publish to Thingspeak and populate fields 1,2,3 accordingly
     we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
     on the particle dashboard.
-    */
+    *//*
     Particle.publish("thingSpeakWrite_All", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
        "\"2\": \"" + String(Si7020Humidity) + "\"," +
        "\"3\": \"" + String(Si1132Visible) + "\"," +
        "\"k\": \"" + key + "\" }", 60, PRIVATE);
+*/
 
-    delay(SLEEP_DELAY); //Stay awake for a while
+    //delay(PUBLISH_DELAY); //publish less often
+
+    delay(100);
+
+    readMPU9150(); //reads new values to compare against old values
+
+    //tilt change checker
+    if(getXTilt(ax,az) > pitch + 50.0 || getXTilt(ax,az) < pitch - 50.0 || getYTilt(ay,az) > roll + 50.0 || getYTilt(ay,az) < roll - 50.0){
+      Particle.publish("TiltDataChanged", tiltString, PRIVATE);
+    }
+    else{
+      Particle.publish("No Change - Tilt");
+    }
+
+    //accelleration change checker
+    String accelString = "";
+    accelString = accelString+"AccelX: "+accelX+"\t" + "AccelY: "+accelY+"\t" + "AccelZ: "+accelZ+"\t";
+
+    if(getAccelX(ax) > accelX + 0.05 || getAccelY(ay) > accelY + 0.05 || getAccelZ(az) > accelZ + 0.05){
+      Particle.publish("AccellerationDataChanged", accelString, PRIVATE);
+    }
+    else{
+      Particle.publish("No Change - Accelleration");
+    }
+
+    //delay(SLEEP_DELAY); //Stay awake for a while
 
     // Power Down Sensors
     //digitalWrite(I2CEN, LOW);
     //digitalWrite(ALGEN, LOW);
 
-    interrupts();
-    System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
+    //interrupts();
+    //System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
   }
 
 void readMPU9150()
