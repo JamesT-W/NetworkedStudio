@@ -13,12 +13,12 @@
 
 const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
 
-int PUBLISH_DELAY = 60000; //adds a delay after publishing so that the following publishes print correctly (ms)
-
+int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
+long PHOTON_SLEEP = 1800; // Seconds X2
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
-int EVENTSDELAY = 1000; //// milliseconds (runs x10)
-int OTAUPDDELAY = 7000; //// milliseconds (runs x1)
-int SLEEP_DELAY = 0;    //// 40 seconds (runs x1) - should get about 24 hours on 2100mAH, 0 to disable and use RELAX_DELAY instead
+//int EVENTSDELAY = 1000; //// milliseconds (runs x10)
+//int OTAUPDDELAY = 7000; //// milliseconds (runs x1)
+//int SLEEP_DELAY = 0;    //// 40 seconds (runs x1) - should get about 24 hours on 2100mAH, 0 to disable and use RELAX_DELAY instead
 String SLEEP_DELAY_MIN = "15"; // seconds - easier to store as string then convert to int
 String SLEEP_DELAY_STATUS = "OK"; // always OK to start with
 int RELAX_DELAY = 5; // seconds (runs x1) - no power impact, just idle/relaxing
@@ -186,7 +186,6 @@ void loop(void)
     float accelXYZ =  getAccelXYZ(ax, ay, az);   //returns the vector sum of the
                                           //acceleration along x, y and z axes
 
-
     //// reads and returns sound level
     float soundLevel = readSoundLevel();
 
@@ -206,7 +205,6 @@ void loop(void)
     //Get and publish Humidity
     String humidString = blank+"Humidity: "+Si7020Humidity;
     Particle.publish("Hdata:", humidString, PRIVATE);
-    delay(PUBLISH_DELAY);
 
     //Get and publish temperature
     String tempString = blank+"Temperature: "+Si7020Temperature;
@@ -215,9 +213,6 @@ void loop(void)
     //Get and publish light
     String lightString = blank+"Lightlevel: " +Si1132Visible;
     Particle.publish("Ldata:", lightString, PRIVATE);
-
-    delay(PUBLISH_DELAY); //chill with the updates
-
     /*
     Publish to Thingspeak and populate fields 1,2,3 accordingly
     we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
@@ -227,6 +222,15 @@ void loop(void)
        "\"2\": \"" + String(Si7020Humidity) + "\"," +
        "\"3\": \"" + String(Si1132Visible) + "\"," +
        "\"k\": \"" + key + "\" }", 60, PRIVATE);
+
+    delay(SLEEP_DELAY); //Stay awake for a while
+
+    // Power Down Sensors
+    //digitalWrite(I2CEN, LOW);
+    //digitalWrite(ALGEN, LOW);
+
+    interrupts();
+    System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
   }
 
 void readMPU9150()
