@@ -13,8 +13,8 @@
 
 const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
 
-int PUBLISH_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
-long PHOTON_SLEEP = 30; // seconds
+int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
+long PHOTON_SLEEP = 1800; // Seconds X2
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
 //int EVENTSDELAY = 1000; //// milliseconds (runs x10)
 //int OTAUPDDELAY = 7000; //// milliseconds (runs x1)
@@ -223,7 +223,7 @@ void loop(void)
        "\"3\": \"" + String(Si1132Visible) + "\"," +
        "\"k\": \"" + key + "\" }", 60, PRIVATE);
 
-    delay(PUBLISH_DELAY); //Stay awake for a while
+    delay(SLEEP_DELAY); //Stay awake for a while
 
     // Power Down Sensors
     //digitalWrite(I2CEN, LOW);
