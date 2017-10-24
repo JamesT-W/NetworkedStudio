@@ -13,8 +13,8 @@
 
 const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
 
-//int PUBLISH_DELAY = 3600000; //adds a delay after publishing so that the following publishes print correctly (ms)
-int PHOTON_SLEEP = 10;
+int PUBLISH_DELAY = 60000; //adds a delay after publishing so that the following publishes print correctly (ms)
+int PHOTON_SLEEP = 2;
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
 //int EVENTSDELAY = 1000; //// milliseconds (runs x10)
 //int OTAUPDDELAY = 7000; //// milliseconds (runs x1)
@@ -154,6 +154,7 @@ void initialiseMPU9150()
 
 void loop(void)
 {
+    interrupts();
     //// prints device version and address
 
     //Serial.print("Device version: "); Serial.println(System.version());
@@ -223,11 +224,12 @@ void loop(void)
        "\"3\": \"" + String(Si1132Visible) + "\"," +
        "\"k\": \"" + key + "\" }", 60, PRIVATE);
 
+    delay(PUBLISH_DELAY); //Stay awake for a while
+
     // Power Down Sensors
     digitalWrite(I2CEN, LOW);
     digitalWrite(ALGEN, LOW);
 
-    //delay(PUBLISH_DELAY); //chill with the updates
     System.sleep(PHOTON_SLEEP);
   }
 
