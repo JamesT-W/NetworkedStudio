@@ -11,7 +11,7 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
+const String key = ""; //Thingspeak API Key
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
