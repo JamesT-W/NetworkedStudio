@@ -2,7 +2,7 @@
 SCC330 Networked Studio
 Contributors: Viktor Kolev, Eduard Schlotter, James Thomas-Woodhouse, Cyrus Gao
 
-https://docs.particle.io/reference/firmware/photon/#particle-publish- READ THE DOCUMENTATION GENTELMEN
+https://docs.particle.io/reference/firmware/photon/#particle-publish- READ THE DOCUMENTATION GENTLEMEN
 
 
 
