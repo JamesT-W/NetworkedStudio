@@ -217,7 +217,7 @@ void loop(void)
     String accelString = "";
     accelString = accelString+"AccelX: "+accelX+"\t" + "AccelY: "+accelY+"\t" + "AccelZ: "+accelZ+"\t";
 
-    if(getAccelX(ax) > accelX + 0.011 || getAccelY(ay) > accelY + 0.011 || getAccelZ(az) > accelZ + 0.011){
+    if(getAccelX(ax) > accelX + 0.017 || getAccelY(ay) > accelY + 0.017 || getAccelZ(az) > accelZ + 0.017){
       WiFi.on();
       delay(30000);
       Particle.publish("AccellerationDataChanged", accelString, PRIVATE);
