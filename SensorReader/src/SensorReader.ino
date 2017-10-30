@@ -63,6 +63,8 @@ double Si1132UVIndex = 0; //// UV Index scoring is as follows: 1-2  -> Low, 3-5 
 double Si1132Visible = 0; //// Lux
 double Si1132InfraRd = 0; //// Lux
 
+int ifAverage = 0; //use to calculate no motion for Infrared sensor
+
 MPU9150 mpu9150;
 bool ACCELOK = false;
 int cx, cy, cz, ax, ay, az, gx, gy, gz;
@@ -81,7 +83,8 @@ void setPinsMode()
 {
     pinMode(I2CEN, OUTPUT);
     pinMode(ALGEN, OUTPUT);
-    pinMode(LED, OUTPUT);
+    pinMode(LED, OUTPUT); //assume no motion, LED off
+    digitalWrite(LED, LOW);
 
     pinMode(SOUND, INPUT);
 
@@ -112,6 +115,7 @@ void setup()
 
     // initialises MPU9150 inertial measure unit
     initialiseMPU9150();
+
 }
 
 void initialiseMPU9150()
@@ -152,15 +156,9 @@ void initialiseMPU9150()
     }
 }
 
+
 void loop(void)
 {
-    //// prints device version and address
-
-    //Serial.print("Device version: "); Serial.println(System.version());
-    //Serial.print("Device ID: "); Serial.println(System.deviceID());
-    //Serial.print("WiFi IP: "); Serial.println(WiFi.localIP());
-
-    //// ***********************************************************************
 
     //// powers up sensors
     digitalWrite(I2CEN, HIGH);
@@ -170,53 +168,41 @@ void loop(void)
     delay(SENSORDELAY);     //// delay timer
 
     //// ***********************************************************************
-
-    readMPU9150();          //// reads compass, accelerometer and gyroscope data
-    readWeatherSi7020();    //// reads humidity, temperature.
     readWeatherSi1132();    //// reads light sensor (UV, IF, visible)
 
-
-    float pitch = getXTilt(ax, az);       //// returns device tilt along x-axis
-    float roll =  getYTilt(ay,az);        //// returns device tilt along y-axis
-
-
-    float accelX = getAccelX(ax);         //// returns scaled acceleration along x axis
-    float accelY = getAccelY(ay);         //// returns scaled acceleration along y axis
-    float accelZ = getAccelZ(az);         //// returns scaled acceleration along y axis
-    float accelXYZ =  getAccelXYZ(ax, ay, az);   //returns the vector sum of the
-                                          //acceleration along x, y and z axes
-
-    //// reads and returns sound level
-    float soundLevel = readSoundLevel();
-
-
-    /* Get and print X and Y Tilt
-    Serial.print("XTilt: "); Serial.print(getXTilt(ax, az)); Serial.print(" Degres\t");
-    Serial.print("YTilt: "); Serial.print(getYTilt(ay, az)); Serial.println(" Degrees");
-
-    String tiltString = "";
-    tiltString = tiltString+"XTilt: "+getXTilt(ax, az)+" Degrees\t"+"YTilt: "+getYTilt(ay, az)+" Degrees";
-
-    Particle.publish("TiltData",tiltString, PRIVATE); // Tilt
-    delay(PUBLISH_DELAY);
-    */
-
-
+    digitalWrite(LED, LOW); //assume no motion, LED off
 
     String blank = ""; //temporary
-    //Get and publish Humidity
-    //String humidString = blank+"Humidity: "+Si7020Humidity;
-    //Particle.publish("Hdata:", humidString, PRIVATE);
-
-    //Get and publish temperature
-    //String tempString = blank+"Temperature: "+Si7020Temperature;
-    //Particle.publish("Tdata:", tempString, PRIVATE);
 
     //Get and publish light
   //  String lightString = blank+"Lightlevel: " +Si1132Visible;
   //  Particle.publish("Ldata:", lightString, PRIVATE);
-    String irString = blank+"InfraRed: " +Si1132InfraRd;
+
+    ifAverage = 0; //reset average
+
+    ifAverage = average(ifAverage);
+    String irString = blank+"InfraRed: " +ifAverage;
+    Serial.println("ifAverage: " +ifAverage);
     Particle.publish("INFRARED:", irString, PRIVATE);
+
+    bool loop = true;
+    while(loop)
+    {
+      int newAverage = 0;
+      newAverage = average(newAverage);
+      Serial.println("here");
+      if(newAverage < ifAverage)
+      {
+        String newString = blank+"NewInfraRed: " +newAverage;
+        Serial.println("newAverage: " +newAverage);
+        Particle.publish("NEWINFRARED", newString, PRIVATE);
+        Particle.publish("IF", "MOTION DETECTED", PRIVATE);
+        digitalWrite(LED, HIGH);
+        loop = false;
+      }
+    }
+
+
     //String uvString = blank+"Ultraviolet: " +Si1132UVIndex;
     //Particle.publish("UV", uvString, PRIVATE);
 
@@ -241,7 +227,21 @@ void loop(void)
     interrupts();
     System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
     */
-    delay(1000);
+  }
+
+
+  /*take 10 IF readings and calculate average
+  */
+  int average(int value)
+  {
+    int collect = 0;
+    for(int i=0; i<10; i++)
+    {
+      readWeatherSi1132();
+      collect = collect+Si1132InfraRd;
+    }
+    value = collect / 10;
+    return value;
   }
 
 void readMPU9150()
