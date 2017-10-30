@@ -241,6 +241,7 @@ void loop(void)
     interrupts();
     System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
     */
+    delay(1000);
   }
 
 void readMPU9150()
