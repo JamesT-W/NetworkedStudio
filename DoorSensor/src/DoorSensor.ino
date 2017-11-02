@@ -22,7 +22,6 @@
 #define MPU9150_CMPS_ZOUT_L        0x4E   // R
 #define MPU9150_CMPS_ZOUT_H        0x4F   // R
 
-int CHANGES_DELAY = 500; //the number of milliseconds to wait before checking the new data values
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
 int EVENTSDELAY = 1000; //// milliseconds (runs x10)
 int OTAUPDDELAY = 7000; //// milliseconds (runs x1)
@@ -80,12 +79,13 @@ float pitch = 0;
 float roll = 0;
 float yaw = 0;
 
-float newPitch = 0;
-float newRoll = 0;
-
 float compassX = 0;
 float compassY = 0;
 float compassZ = 0;
+
+float originalX = 0;
+float originalY = 0;
+float originalZ = 0;
 
 int mag[3]; //*******
 
@@ -144,7 +144,11 @@ void setup()
     MPU9150_writeSensor(MPU9150_PWR_MGMT_1, 0); // Clear the 'sleep' bit to start the sensor.
 
     initialiseMPU9150();
+    readMPU9150();          // reads compass, accelerometer and gyroscope
 
+    originalX = getCompassX(cx);
+    originalY = getCompassX(cy);
+    originalZ = getCompassX(cz);
 }
 
 void initialiseMPU9150()
@@ -194,13 +198,11 @@ void initialiseMPU9150()
 void loop(void)
 {
     //// prints device version and address
-
-    //Serial.print("Device version: "); Serial.println(System.version());
-    //Serial.print("Device ID: "); Serial.println(System.deviceID());
-    //Serial.print("WiFi IP: "); Serial.println(WiFi.localIP());
-
-    //// ***********************************************************************
-    //// ***********************************************************************
+    /*
+    Serial.print("Device version: "); Serial.println(System.version());
+    Serial.print("Device ID: "); Serial.println(System.deviceID());
+    Serial.print("WiFi IP: "); Serial.println(WiFi.localIP());
+    */
 
     //// powers up sensors
     digitalWrite(I2CEN, HIGH);
@@ -209,55 +211,37 @@ void loop(void)
     //// allows sensors time to warm up
     delay(SENSORDELAY);
 
-    //// ***********************************************************************
-    //// ***********************************************************************
-
     readMPU9150();          // reads compass, accelerometer and gyroscope
-//    readWeatherSi7020();    // reads temperature and humidity sensor values
-//    readWeatherSi1132();    // reads light sensor value
 
-    pitch = getXTilt(ax, az)*RAD_TO_DEGREES;
-    roll  = getYTilt(ay, az)*RAD_TO_DEGREES;
     compassX = getCompassX(cx);
     compassY = getCompassY(cy);
     compassZ = getCompassZ(cz);
 
-    delay(CHANGES_DELAY);
-    readMPU9150();          // reads compass, accelerometer and gyroscope
-
-    newPitch = getXTilt(ax,az)*RAD_TO_DEGREES;       //// returns device tilt along x-axis
-    newRoll =  getYTilt(ay,az)*RAD_TO_DEGREES;        //// returns device tilt along y-axis
-
-    String tiltString = "";
-    tiltString = tiltString+"XTilt: "+pitch+" Degrees "+"YTilt: "+roll+" Degrees";
-
     String compassString = "";
     compassString = compassString+"X: "+compassX+" Y: "+compassY+" Z: "+compassZ;
 
-    if(compassX > -7 || compassY > -7 || compassZ > -8){
-      WiFi.on();
-      delay(20000); //ensure that the data is published - needs altering and hopefully removing
+    //determines if the door has been moved
+    if(compassX > originalX + 1.5 || compassY > originalY + 1.5 || compassZ > originalZ + 1.5){
+      //WiFi.on();
+      //while(WiFi.connecting()){} //delays until WiFi is connected before progressing further down the if loop
+      //delay(1000);
       Particle.publish("Compass", compassString, PRIVATE);
-      delay(5000);
+      delay(1000);
     }
-    WiFi.off();
-
-    //tilt change checker
-    /*
-    if(newPitch > pitch + 40.0 || newPitch < pitch - 40.0 || newRoll > roll + 40.0 || newRoll < roll - 40.0){
-      //if(newCompassX > compassX + 45.0 || newCompassY > compassY + 45.0 || newCompassY > compassY + 45.0){
-        //WiFi.on();
-        //delay(1000);
-        Particle.publish("Tilt", tiltString, PRIVATE);
-        //delay(100);
-        float tiltAverage = (newPitch + newRoll) / 2;
-        //Particle.publish("thingSpeakWrite_Door", "{ \"4\": \"" + String(tiltAverage) + "\"," +
-        //   "\"k\": \"" + key + "\" }", 60, PRIVATE);
-        delay(1000);
-      //}
-    }
-    delay(100);
+    //delay(1000);
     //WiFi.off();
+
+    /*
+    if(compassX > originalX + 1.25 || compassY > originalY + 1.25 || compassZ > originalZ + 1.25){
+      WiFi.connect();
+      while(WiFi.connecting()){ //delays until WiFi is connected before progressing further down the if loop
+        delay(1000);
+      }
+      delay(1000);
+      Particle.publish("Compass", compassString, PRIVATE);
+      delay(1000);
+    }
+    WiFi.disconnect();
     */
 
     /*Publish to Thingspeak and populate fields 1,2,3 accordingly
@@ -269,9 +253,6 @@ void loop(void)
     // Power Down Sensors
     //digitalWrite(I2CEN, LOW);
     //digitalWrite(ALGEN, LOW);
-
-    //interrupts();
-    //System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
 }
 
 void readMPU9150()
