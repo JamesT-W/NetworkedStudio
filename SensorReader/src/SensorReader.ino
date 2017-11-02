@@ -185,6 +185,10 @@ void loop(void)
     Serial.println("ifAverage: " +ifAverage);
     Particle.publish("INFRARED:", irString, PRIVATE);
 
+    //readSoundLevel;
+    //String soundString = blank+ "Sound Level: " +SOUNDV;
+    //Particle.publish("SOUND:", soundString, PRIVATE);
+
     bool loop = true;
     while(loop)
     {
@@ -234,13 +238,18 @@ void loop(void)
   */
   int average(int value)
   {
-    int collect = 0;
-    for(int i=0; i<10; i++)
+    Si1132 si1132;
+    Si1132OK = si1132.begin(); //// initialises Si1132
+    if (Si1132OK)
     {
-      readWeatherSi1132();
-      collect = collect+Si1132InfraRd;
+        int collect = 0;
+        for(int i=0; i<10; i++)
+        {
+          Si1132InfraRd = si1132.readIR();
+          collect = collect+Si1132InfraRd;
+        }
+        value = collect / 10;
     }
-    value = collect / 10;
     return value;
   }
 
