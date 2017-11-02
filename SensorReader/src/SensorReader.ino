@@ -185,16 +185,17 @@ void loop(void)
     Serial.println("ifAverage: " +ifAverage);
     Particle.publish("INFRARED:", irString, PRIVATE);
 
-    //readSoundLevel;
-    //String soundString = blank+ "Sound Level: " +SOUNDV;
-    //Particle.publish("SOUND:", soundString, PRIVATE);
+    readSoundLevel;
+    float INITSOUND = SOUNDV;
+    String soundString = blank+ "Sound Level: " +SOUNDV;
+    Particle.publish("SOUND:", soundString, PRIVATE);
 
     bool loop = true;
     while(loop)
     {
       int newAverage = 0;
       newAverage = average(newAverage);
-      Serial.println("here");
+      readSoundLevel;
       if(newAverage < ifAverage)
       {
         String newString = blank+"NewInfraRed: " +newAverage;
@@ -203,6 +204,18 @@ void loop(void)
         Particle.publish("IF", "MOTION DETECTED", PRIVATE);
         digitalWrite(LED, HIGH);
         loop = false;
+      }
+      if(SOUNDV > INITSOUND)
+      {
+        String newString = blank+"NewSOUNDV: " +SOUNDV;
+        Particle.publish("NEWSOUND", newString, PRIVATE);
+        Particle.publish("SOUND", "SOUND DETECTED", PRIVATE);
+        digitalWrite(LED, HIGH);
+        digitalWrite(LED, LOW);
+        digitalWrite(LED, HIGH);
+        digitalWrite(LED, LOW);
+        digitalWrite(LED, HIGH);
+
       }
     }
 
