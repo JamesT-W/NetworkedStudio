@@ -4,7 +4,7 @@
 1. Sort out your zone number in the team to differ our devices. For example, I have zone number 3.
 Edit your ino code before flashing. In line 14, where we used to set our API keys for ThingSpeak:
 ```c
-const String key = "3"; //C
+const String key = "3"; 
 ```
 Change the numebr 3 to your zone number,eg. 1 or 2. (Currently it's only receiving 3 zones' data)
 
