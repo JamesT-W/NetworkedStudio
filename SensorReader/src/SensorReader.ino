@@ -204,53 +204,18 @@ void loop(void)
       Serial.println(ap.rssi);
     }
 
-
-    /* Get and print X and Y Tilt
-    Serial.print("XTilt: "); Serial.print(getXTilt(ax, az)); Serial.print(" Degres\t");
-    Serial.print("YTilt: "); Serial.print(getYTilt(ay, az)); Serial.println(" Degrees");
-
-    String tiltString = "";
-    tiltString = tiltString+"XTilt: "+getXTilt(ax, az)+" Degrees\t"+"YTilt: "+getYTilt(ay, az)+" Degrees";
-
-    Particle.publish("TiltData",tiltString, PRIVATE); // Tilt
-    delay(PUBLISH_DELAY);
-    */
-
-    float averageHumidity, averageLight, averageTemp;
-    averageTemp = averageLight = averageHumidity = 0;
-
     float averageSignal = 0;
 
     for(int i = 0; i < 10; i++) {
-      readWeatherSi1132();
-      readWeatherSi7020();
       averageSignal = averageSignal + WiFi.RSSI();
-      averageLight = averageLight + Si1132Visible;
-      averageTemp = averageTemp + Si7020Temperature;
-      averageHumidity = averageHumidity + Si7020Humidity;
       delay(1000);
    }
    averageSignal = averageSignal / 10;
-   averageLight = averageLight / 10;
-   averageTemp = averageTemp / 10;
-   averageHumidity = averageHumidity / 10;
 
 
     String blank = ""; //temporary
 
     String signalString = blank+"Signal Strength: "+averageSignal;
-    Particle.publish("Sdata:", signalString, PRIVATE);
-    //Get and publish Humidity
-    String humidString = blank+"Humidity: "+averageHumidity;
-    Particle.publish("Hdata:", humidString, PRIVATE);
-
-    //Get and publish temperature
-    String tempString = blank+"Temperature: "+averageTemp;
-    Particle.publish("Tdata:", tempString, PRIVATE);
-
-    //Get and publish light
-    String lightString = blank+"Lightlevel: " +averageLight;
-    Particle.publish("Ldata:", lightString, PRIVATE);
     /*
     Publish to Thingspeak and populate fields 1,2,3 accordingly
     we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
@@ -259,19 +224,20 @@ void loop(void)
 
     delay(10000);
 
-    Particle.publish("thingSpeakWrite_All", "{ \"1\": \"" + String(averageTemp) + "\"," +
+    /*Particle.publish("thingSpeakWrite_All", "{ \"1\": \"" + String(averageTemp) + "\"," +
        "\"2\": \"" + String(averageHumidity) + "\"," +
        "\"3\": \"" + String(averageLight) + "\"," +
        "\"k\": \"" + key + "\" }", 60, PRIVATE);
+       */
 
-    delay(SLEEP_DELAY); //Stay awake for a while
+    //delay(SLEEP_DELAY); //Stay awake for a while
 
     // Power Down Sensors
     //digitalWrite(I2CEN, LOW);
     //digitalWrite(ALGEN, LOW);
 
-    interrupts();
-    System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
+    //interrupts();
+    //System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
   }
 
 void readMPU9150()
