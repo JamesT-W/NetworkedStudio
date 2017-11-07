@@ -11,6 +11,8 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
+//#define LED 7  //this provides visual indication of motion detected
+
 const String key = "L6Z4HW5VVRAMXN33"; //Thingspeak API Key
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
@@ -32,6 +34,18 @@ byte I2CERR, I2CADR;
 int I2CEN = D2;
 int ALGEN = D3;
 int LED = D7;
+
+/* MOTION DETECTION VARIABLES
+*/
+int inputPin = D6;  // Digital Pin D6 is used to read the output of the PIR
+int msensorState = LOW;        // Start by assuming no motion detected
+int msensorValue = 0;          // Variable for reading the inputPin (D6) status
+///////////////////////////////////////////////////////////////////////////////
+/*SOUND DETECTION VARIABLES
+*/
+float soundState; //initial measurement
+float soundValue; //second measurement to be compared
+///////////////////////////////////////////////////////////////////////////////
 
 int SOUND = A0;
 double SOUNDV = 0; //// Volts Peak-to-Peak Level/Amplitude
@@ -62,8 +76,6 @@ bool Si1132OK = false;
 double Si1132UVIndex = 0; //// UV Index scoring is as follows: 1-2  -> Low, 3-5  -> Moderate, 6-7  -> High, 8-10 -> Very High, 11+  -> Extreme
 double Si1132Visible = 0; //// Lux
 double Si1132InfraRd = 0; //// Lux
-
-int ifAverage = 0; //use to calculate no motion for Infrared sensor
 
 MPU9150 mpu9150;
 bool ACCELOK = false;
@@ -116,6 +128,13 @@ void setup()
     // initialises MPU9150 inertial measure unit
     initialiseMPU9150();
 
+    Serial.begin(9600);
+
+    pinMode(LED, OUTPUT);         // Sets pin connected to photon LED as output
+    pinMode(inputPin, INPUT);     // Sets inputPin as an INPUT
+    digitalWrite(LED, LOW);       // Turns LED OFF, i.e. start by assuming no motion
+    soundState = readSoundLevel(); //take first measurement of sound level
+
 }
 
 void initialiseMPU9150()
@@ -159,92 +178,41 @@ void initialiseMPU9150()
 
 void loop(void)
 {
+  msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
+  soundValue = readSoundLevel(); //take reading of sound level to compare with initial
 
-    //// powers up sensors
-    digitalWrite(I2CEN, HIGH);
-    digitalWrite(ALGEN, HIGH);
+  if (msensorValue == HIGH)              // If the input pin is HIGH turn LED ON
+  {
+    digitalWrite(LED, HIGH);
 
-    //// allows sensors time to warm up
-    delay(SENSORDELAY);     //// delay timer
-
-    //// ***********************************************************************
-    readWeatherSi1132();    //// reads light sensor (UV, IF, visible)
-
-    digitalWrite(LED, LOW); //assume no motion, LED off
-
-    String blank = ""; //temporary
-
-    //Get and publish light
-  //  String lightString = blank+"Lightlevel: " +Si1132Visible;
-  //  Particle.publish("Ldata:", lightString, PRIVATE);
-
-    ifAverage = 0; //reset average
-
-    ifAverage = average(ifAverage);
-    String irString = blank+"InfraRed: " +ifAverage;
-    Serial.println("ifAverage: " +ifAverage);
-    Particle.publish("INFRARED:", irString, PRIVATE);
-
-    readSoundLevel;
-    float INITSOUND = SOUNDV;
-    String soundString = blank+ "Sound Level: " +SOUNDV;
-    Particle.publish("SOUND:", soundString, PRIVATE);
-
-    bool loop = true;
-    while(loop)
-    {
-      int newAverage = 0;
-      newAverage = average(newAverage);
-      readSoundLevel;
-      if(newAverage < ifAverage)
-      {
-        String newString = blank+"NewInfraRed: " +newAverage;
-        Serial.println("newAverage: " +newAverage);
-        Particle.publish("NEWINFRARED", newString, PRIVATE);
-        Particle.publish("IF", "MOTION DETECTED", PRIVATE);
-        digitalWrite(LED, HIGH);
-        loop = false;
-      }
-      if(SOUNDV > INITSOUND)
-      {
-        String newString = blank+"NewSOUNDV: " +SOUNDV;
-        Particle.publish("NEWSOUND", newString, PRIVATE);
-        Particle.publish("SOUND", "SOUND DETECTED", PRIVATE);
-        digitalWrite(LED, HIGH);
-        digitalWrite(LED, LOW);
-        digitalWrite(LED, HIGH);
-        digitalWrite(LED, LOW);
-        digitalWrite(LED, HIGH);
-
-      }
+    if (msensorState == LOW) //Checks if sensor state has changed from its previous state
+     {
+       Serial.println("Motion has been detected!");    // If yes,  prints new state and
+       msensorState = HIGH;                    // preserves current sensor state
+       Particle.publish("IFTT", "MOTION DETECTED", PUBLIC);
     }
-
-
-    //String uvString = blank+"Ultraviolet: " +Si1132UVIndex;
-    //Particle.publish("UV", uvString, PRIVATE);
-
-    /*
-    Publish to Thingspeak and populate fields 1,2,3 accordingly
-    we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
-    on the particle dashboard.
-
-
-    Particle.publish("thingSpeakWrite_All", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
-       "\"2\": \"" + String(Si7020Humidity) + "\"," +
-       "\"3\": \"" + String(Si1132Visible) + "\"," +
-       "\"k\": \"" + key + "\" }", 60, PRIVATE);
-
-
-    delay(SLEEP_DELAY); //Stay awake for a while
-
-    // Power Down Sensors
-    //digitalWrite(I2CEN, LOW);
-    //digitalWrite(ALGEN, LOW);
-
-    interrupts();
-    System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
-    */
   }
+  else
+  {
+    digitalWrite(LED, LOW);                  // Turns LED OFF
+    if (msensorState == HIGH) //Checks if sensor state has changed from its previous state
+    {
+      Serial.println("No motion detected!");      // if yes, prints new state
+      msensorState = LOW;                    // preserves current sensor state
+    }
+  }
+
+  if(soundValue > soundState) //means sound was detected
+  {
+    Serial.println("Sound detected");
+    Particle.publish("SND", "SOUND DETECTED", PRIVATE);
+
+  }
+
+
+
+
+}
 
 
   /*take 10 IF readings and calculate average
