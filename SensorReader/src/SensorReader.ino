@@ -180,6 +180,8 @@ void loop(void)
 {
   msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
   soundValue = readSoundLevel(); //take reading of sound level to compare with initial
+  String str ="";
+  Serial.println(str +soundValue);
 
   if (msensorValue == HIGH)              // If the input pin is HIGH turn LED ON
   {
@@ -202,6 +204,8 @@ void loop(void)
     }
   }
 
+/*
+
   if(soundValue > soundState) //means sound was detected
   {
     Serial.println("Sound detected");
@@ -209,7 +213,7 @@ void loop(void)
 
   }
 
-
+*/
 
 
 }
