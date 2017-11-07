@@ -189,6 +189,21 @@ void loop(void)
     //// reads and returns sound level
     float soundLevel = readSoundLevel();
 
+    WiFiAccessPoint aps[20];
+    int found = WiFi.scan(aps, 20);
+    Serial.println("test");
+    for (int i=0; i<found; i++) {
+      WiFiAccessPoint& ap = aps[i];
+      Serial.print("SSID: ");
+      Serial.println(ap.ssid);
+      Serial.print("Security: ");
+      Serial.println(ap.security);
+      Serial.print("Channel: ");
+      Serial.println(ap.channel);
+      Serial.print("RSSI: ");
+      Serial.println(ap.rssi);
+    }
+
 
     /* Get and print X and Y Tilt
     Serial.print("XTilt: "); Serial.print(getXTilt(ax, az)); Serial.print(" Degres\t");
@@ -204,20 +219,27 @@ void loop(void)
     float averageHumidity, averageLight, averageTemp;
     averageTemp = averageLight = averageHumidity = 0;
 
+    float averageSignal = 0;
+
     for(int i = 0; i < 10; i++) {
       readWeatherSi1132();
       readWeatherSi7020();
+      averageSignal = averageSignal + WiFi.RSSI();
       averageLight = averageLight + Si1132Visible;
       averageTemp = averageTemp + Si7020Temperature;
       averageHumidity = averageHumidity + Si7020Humidity;
       delay(1000);
    }
+   averageSignal = averageSignal / 10;
    averageLight = averageLight / 10;
    averageTemp = averageTemp / 10;
    averageHumidity = averageHumidity / 10;
 
 
     String blank = ""; //temporary
+
+    String signalString = blank+"Signal Strength: "+averageSignal;
+    Particle.publish("Sdata:", signalString, PRIVATE);
     //Get and publish Humidity
     String humidString = blank+"Humidity: "+averageHumidity;
     Particle.publish("Hdata:", humidString, PRIVATE);
@@ -234,6 +256,8 @@ void loop(void)
     we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
     on the particle dashboard.
     */
+
+    delay(10000);
 
     Particle.publish("thingSpeakWrite_All", "{ \"1\": \"" + String(averageTemp) + "\"," +
        "\"2\": \"" + String(averageHumidity) + "\"," +
