@@ -50,11 +50,9 @@ When you're ready to compile your project, make sure you have the correct Partic
 - Any libraries stored under `lib/<libraryname>/src`
 
 /***************************************************************************************/
+              ----HOW TO GET THIS BRANCH TO WORK-----
 
-
-<<<<<<<<<HOW TO INTEGRATE THE DATAHISTORY-THINGSPEAK BRANCH INTO YOUR OWN PROJECT>>>>>>>>
-
-Simply compiling and flashing the code to your device is not enough. Follow these steps to get your photon to publish to this project's ThingSpeak Channel (https://thingspeak.com/channels/350722)
+Simply compiling and flashing the code to your device is not enough. Follow these steps to get your photon to publish to our server:
 
 1. Go to https://console.particle.io/integrations
 
@@ -63,32 +61,25 @@ Simply compiling and flashing the code to your device is not enough. Follow thes
 3. Paste this code into the field: 
 
 {
-    "event": "thingSpeakWrite_",
-    "url": "https://api.thingspeak.com/update",
-    "requestType": "POST",
-    "form": {
-        "api_key": "{{k}}",
-        "field1": "{{1}}",
-        "field2": "{{2}}",
-        "field3": "{{3}}",
-        "field4": "{{4}}",
-        "field5": "{{5}}",
-        "field6": "{{6}}",
-        "field7": "{{7}}",
-        "field8": "{{8}}",
-        "lat": "{{a}}",
-        "long": "{{o}}",
-        "elevation": "{{e}}",
-        "status": "{{s}}"
-    },
-    "mydevices": true,
-    "noDefaults": true
+   "event": "CustomServer",
+   "url": "http://47.88.159.162:8000/webapp/api/",
+   "requestType": "POST",
+   "json": {
+     "key": "{{k}}",
+     "temp": "{{1}}",
+     "humid": "{{2}}",
+     "light": "{{3}}",
+     "time": "{{PARTICLE_PUBLISHED_AT}}"
+   },
+   "noDefaults": true
 }
 
-if you are running the MOTION DETECTOR BRANCH, you also need this code:
+4. Click create webhook.
+
+5. Create a new webhook and repeat process for this webhook (used for motion and sound detection)
 
 { 
-    "event": "CustomServer", 
+    "event": "Motion", 
     "url": "http://47.88.159.162:8000/webapp/api/", 
     "requestType": "POST",
     "json": { 
@@ -101,6 +92,8 @@ if you are running the MOTION DETECTOR BRANCH, you also need this code:
         "noDefaults": true 
     
 }
-4. Click create webhook.
 
-You can now flash the project firmware to your photon and it will post updates on the ThingSpeak channel.
+You can now flash the project firmware to your photon and it will post updates on the server.
+
+
+

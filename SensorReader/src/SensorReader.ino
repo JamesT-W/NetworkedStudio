@@ -11,9 +11,8 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-//#define LED 7  //this provides visual indication of motion detected
 
-const String key = "3"; //Zone key
+const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -178,10 +177,11 @@ void initialiseMPU9150()
 
 void loop(void)
 {
+  digitalWrite(I2CEN, HIGH);
   digitalWrite(ALGEN, HIGH);
-  delay(100);
+  delay(500);
 
-//Calibrate sound, measure ambient noise levels
+  //Calibrate sound, measure ambient noise levels
   if(calibration)
   {
     soundState = measure();
@@ -213,6 +213,7 @@ void loop(void)
     }
   }
 
+
   //measure sound, check if its more than ambient sound level (within threshold)
   soundValue = measure();
   if(soundValue > soundState + 500)
@@ -222,6 +223,47 @@ void loop(void)
     calibration = true;
     delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
   }
+  
+  /* Take averages of environment variables and send to server every hour
+  */
+  
+  float averageHumidity, averageLight, averageTemp;
+    averageTemp = averageLight = averageHumidity = 0;
+
+    for(int i = 0; i < 10; i++) {
+      readWeatherSi1132();
+      readWeatherSi7020();
+      averageLight = averageLight + Si1132Visible;
+      averageTemp = averageTemp + Si7020Temperature;
+      averageHumidity = averageHumidity + Si7020Humidity;
+      delay(1000);
+   }
+   averageLight = averageLight / 10;
+   averageTemp = averageTemp / 10;
+   averageHumidity = averageHumidity / 10;
+
+
+    String blank = ""; //temporary
+    //Get and publish Humidity
+    String humidString = blank+"Humidity: "+averageHumidity;
+    Particle.publish("Hdata:", humidString, PRIVATE);
+
+    //Get and publish temperature
+    String tempString = blank+"Temperature: "+averageTemp;
+    Particle.publish("Tdata:", tempString, PRIVATE);
+
+    //Get and publish light
+    String lightString = blank+"Lightlevel: " +averageLight;
+    Particle.publish("Ldata:", lightString, PRIVATE);
+
+    /*
+    Publish to server and populate fields 1,2,3 accordingly
+    */
+
+    Particle.publish("CustomServer", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
+       "\"2\": \"" + String(Si7020Humidity) + "\"," +
+       "\"3\": \"" + String(Si1132Visible) + "\"," +
+       "\"k\": \"" + key + "\" }", PRIVATE);
 }
 
 
