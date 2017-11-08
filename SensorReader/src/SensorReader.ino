@@ -11,7 +11,7 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
+const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -235,10 +235,10 @@ void loop(void)
     on the particle dashboard.
     */
 
-    Particle.publish("thingSpeakWrite_All", "{ \"1\": \"" + String(averageTemp) + "\"," +
-       "\"2\": \"" + String(averageHumidity) + "\"," +
-       "\"3\": \"" + String(averageLight) + "\"," +
-       "\"k\": \"" + key + "\" }", 60, PRIVATE);
+    Particle.publish("CustomServer", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
+       "\"2\": \"" + String(Si7020Humidity) + "\"," +
+       "\"3\": \"" + String(Si1132Visible) + "\"," +
+       "\"k\": \"" + key + "\" }", PRIVATE);
 
     delay(SLEEP_DELAY); //Stay awake for a while
 
