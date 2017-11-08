@@ -61,17 +61,18 @@ Simply compiling and flashing the code to your device is not enough. Follow thes
 3. Paste this code into the field: 
 
 {
-   "event": "CustomServer",
-   "url": "http://47.88.159.162:8000/webapp/api/",
-   "requestType": "POST",
-   "json": {
-     "key": "{{k}}",
-     "temp": "{{1}}",
-     "humid": "{{2}}",
-     "light": "{{3}}",
-     "time": "{{PARTICLE_PUBLISHED_AT}}"
-   },
-   "noDefaults": true
+    "event": "CustomServer",
+    "url": "http://47.88.159.162:8000/webapp/api/",
+    "requestType": "POST",
+    "json": {
+      "key": "{{k}}",
+      "temp": "{{1}}",
+      "humid": "{{2}}",
+      "light": "{{3}}",
+      "datatype": "{{dataty[e}}",
+      "time": "{{PARTICLE_PUBLISHED_AT}}"
+    },
+    "noDefaults": true
 }
 
 4. Click create webhook.

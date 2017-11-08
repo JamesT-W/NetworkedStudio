@@ -11,7 +11,7 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-
+int Hour = 0; //What time is it?
 const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
@@ -120,7 +120,7 @@ void setup()
     Wire.begin();  // Start up I2C, required for LSM303 communication
 
     // diables interrupts
-    noInterrupts();
+    noInterrupts();                                                            // DO WE NEED INTERRUPTS????
 
     // initialises the IO pins
     setPinsMode();
@@ -133,6 +133,9 @@ void setup()
     pinMode(LED, OUTPUT);         // Sets pin connected to photon LED as output
     pinMode(inputPin, INPUT);     // Sets inputPin as an INPUT
     digitalWrite(LED, LOW);       // Turns LED OFF, i.e. start by assuming no motion
+
+    Hour = Time.hour() - 1;  //Returns hour as an int (0-23). Used to only take environment readings every hour.
+    Serial.println(String(Hour));
 
 }
 
@@ -181,13 +184,13 @@ void loop(void)
   digitalWrite(ALGEN, HIGH);
   delay(500);
 
+  interrupts();
   //Calibrate sound, measure ambient noise levels
   if(calibration)
   {
     soundState = measure();
     Serial.println("Calibrated!");
     calibration = false;
-
   }
 
   msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
@@ -223,11 +226,18 @@ void loop(void)
     calibration = true;
     delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
   }
-  
+
   /* Take averages of environment variables and send to server every hour
   */
-  
-  float averageHumidity, averageLight, averageTemp;
+
+  int newHour = Time.hour();
+  Serial.println(String(newHour));
+  if (newHour != Hour)
+  {
+    Hour = Time.hour();
+    Serial.println("New hour. Printing environment variables.");
+
+    float averageHumidity, averageLight, averageTemp;
     averageTemp = averageLight = averageHumidity = 0;
 
     for(int i = 0; i < 10; i++) {
@@ -243,27 +253,30 @@ void loop(void)
    averageHumidity = averageHumidity / 10;
 
 
-    String blank = ""; //temporary
-    //Get and publish Humidity
-    String humidString = blank+"Humidity: "+averageHumidity;
-    Particle.publish("Hdata:", humidString, PRIVATE);
+  String blank = ""; //temporary
+  //Get and publish Humidity
+  String humidString = blank+"Humidity: "+averageHumidity;
+  Particle.publish("Hdata:", humidString, PRIVATE);
 
-    //Get and publish temperature
-    String tempString = blank+"Temperature: "+averageTemp;
-    Particle.publish("Tdata:", tempString, PRIVATE);
+  //Get and publish temperature
+  String tempString = blank+"Temperature: "+averageTemp;
+  Particle.publish("Tdata:", tempString, PRIVATE);
 
-    //Get and publish light
-    String lightString = blank+"Lightlevel: " +averageLight;
-    Particle.publish("Ldata:", lightString, PRIVATE);
+  //Get and publish light
+  String lightString = blank+"Lightlevel: " +averageLight;
+  Particle.publish("Ldata:", lightString, PRIVATE);
 
-    /*
-    Publish to server and populate fields 1,2,3 accordingly
-    */
+  /*
+  Publish to server and populate fields 1,2,3 accordingly
+  */
 
-    Particle.publish("CustomServer", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
-       "\"2\": \"" + String(Si7020Humidity) + "\"," +
-       "\"3\": \"" + String(Si1132Visible) + "\"," +
-       "\"k\": \"" + key + "\" }", PRIVATE);
+  Particle.publish("CustomServer", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
+     "\"2\": \"" + String(Si7020Humidity) + "\"," +
+     "\"3\": \"" + String(Si1132Visible) + "\"," +
+     "\"k\": \"" + key + "\"," + "\"datatype\": \"" + "THL" + "\" }", PRIVATE);
+
+  }
+
 }
 
 
