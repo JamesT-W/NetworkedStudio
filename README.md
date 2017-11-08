@@ -85,6 +85,22 @@ Simply compiling and flashing the code to your device is not enough. Follow thes
     "noDefaults": true
 }
 
+if you are running the MOTION DETECTOR BRANCH, you also need this code:
+
+{ 
+    "event": "CustomServer", 
+    "url": "http://47.88.159.162:8000/webapp/api/", 
+    "requestType": "POST",
+    "json": { 
+        "key": "{{k}}", 
+        "motion":"{{4}}",
+        "datatype":"{{datatype}}",
+        "time": "{{PARTICLE_PUBLISHED_AT}}" 
+        
+    }, 
+        "noDefaults": true 
+    
+}
 4. Click create webhook.
 
 You can now flash the project firmware to your photon and it will post updates on the ThingSpeak channel.

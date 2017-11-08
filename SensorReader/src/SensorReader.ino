@@ -13,7 +13,7 @@
 
 //#define LED 7  //this provides visual indication of motion detected
 
-const String key = "L6Z4HW5VVRAMXN33"; //Thingspeak API Key
+const String key = "3"; //Zone key
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -43,8 +43,9 @@ int msensorValue = 0;          // Variable for reading the inputPin (D6) status
 ///////////////////////////////////////////////////////////////////////////////
 /*SOUND DETECTION VARIABLES
 */
-float soundState; //initial measurement
-float soundValue; //second measurement to be compared
+int soundState = 0; //initial measurement
+int soundValue = 0; //second measurement to be compared
+bool calibration = true;
 ///////////////////////////////////////////////////////////////////////////////
 
 int SOUND = A0;
@@ -133,7 +134,6 @@ void setup()
     pinMode(LED, OUTPUT);         // Sets pin connected to photon LED as output
     pinMode(inputPin, INPUT);     // Sets inputPin as an INPUT
     digitalWrite(LED, LOW);       // Turns LED OFF, i.e. start by assuming no motion
-    soundState = readSoundLevel(); //take first measurement of sound level
 
 }
 
@@ -178,11 +178,19 @@ void initialiseMPU9150()
 
 void loop(void)
 {
-  msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
-  soundValue = readSoundLevel(); //take reading of sound level to compare with initial
-  String str ="";
-  Serial.println(str +soundValue);
+  digitalWrite(ALGEN, HIGH);
+  delay(100);
 
+//Calibrate sound, measure ambient noise levels
+  if(calibration)
+  {
+    soundState = measure();
+    Serial.println("Calibrated!");
+    calibration = false;
+
+  }
+
+  msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
   if (msensorValue == HIGH)              // If the input pin is HIGH turn LED ON
   {
     digitalWrite(LED, HIGH);
@@ -190,9 +198,10 @@ void loop(void)
     if (msensorState == LOW) //Checks if sensor state has changed from its previous state
      {
        Serial.println("Motion has been detected!");    // If yes,  prints new state and
-       msensorState = HIGH;                    // preserves current sensor state
-       Particle.publish("IFTT", "MOTION DETECTED", PUBLIC);
-    }
+       msensorState = HIGH;                            // preserves current sensor state
+       Particle.publish("IFTT", "MOTION DETECTED", PUBLIC); //Used for IFTT notifications
+       sendServer("Motion");          //tell the server motion was detected
+     }
   }
   else
   {
@@ -204,39 +213,54 @@ void loop(void)
     }
   }
 
-/*
-
-  if(soundValue > soundState) //means sound was detected
+  //measure sound, check if its more than ambient sound level (within threshold)
+  soundValue = measure();
+  if(soundValue > soundState + 500)
   {
-    Serial.println("Sound detected");
-    Particle.publish("SND", "SOUND DETECTED", PRIVATE);
-
+    Serial.println("SOUND DETECTED!");
+    sendServer("Sound");                //tell the server sound was detected
+    calibration = true;
+    delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
   }
-
-*/
-
-
 }
 
 
-  /*take 10 IF readings and calculate average
-  */
-  int average(int value)
+//Tell the server when and where motion/sound was detected
+void sendServer(String str)
+{
+  String send = str +" detected in zone " +key +". Device ID: " +System.deviceID();
+  String dataType = "Motion";
+  Particle.publish("Motion", "{ \"4\": \"" + send + "\"," +
+  "\"k\": \"" + key  + "\"," + "\"datatype\": \"" + dataType + "\" }", PRIVATE);
+}
+
+/*read sound, return max-min
+*/
+int measure()
+{
+  unsigned int sampleWindow = 50; // Sample window width in milliseconds (50 milliseconds = 20Hz)
+  unsigned long endWindow = millis() + sampleWindow;  // End of sample window
+
+  unsigned int signalSample = 0;
+  unsigned int signalMin = 4095; // Minimum is the lowest signal below which we assume silence
+  unsigned int signalMax = 0; // Maximum signal starts out the same as the Minimum signal
+
+  // collect data for milliseconds equal to sampleWindow
+  while (millis() < endWindow)
   {
-    Si1132 si1132;
-    Si1132OK = si1132.begin(); //// initialises Si1132
-    if (Si1132OK)
-    {
-        int collect = 0;
-        for(int i=0; i<10; i++)
-        {
-          Si1132InfraRd = si1132.readIR();
-          collect = collect+Si1132InfraRd;
-        }
-        value = collect / 10;
-    }
-    return value;
+      signalSample = analogRead(SOUND);
+      if (signalSample > signalMax)
+      {
+          signalMax = signalSample;  // save just the max levels
+      }
+      else if (signalSample < signalMin)
+      {
+          signalMin = signalSample;  // save just the min levels
+      }
   }
+
+  return signalMax - signalMin;
+}
 
 void readMPU9150()
 {
