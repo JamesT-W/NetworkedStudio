@@ -11,7 +11,7 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-const String key = "3"; //Thingspeak API Key
+const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -201,27 +201,44 @@ void loop(void)
     delay(PUBLISH_DELAY);
     */
 
+    float averageHumidity, averageLight, averageTemp;
+    averageTemp = averageLight = averageHumidity = 0;
+
+    for(int i = 0; i < 10; i++) {
+      readWeatherSi1132();
+      readWeatherSi7020();
+      averageLight = averageLight + Si1132Visible;
+      averageTemp = averageTemp + Si7020Temperature;
+      averageHumidity = averageHumidity + Si7020Humidity;
+      delay(1000);
+   }
+   averageLight = averageLight / 10;
+   averageTemp = averageTemp / 10;
+   averageHumidity = averageHumidity / 10;
+
+
     String blank = ""; //temporary
     //Get and publish Humidity
-    String humidString = blank+"Humidity: "+Si7020Humidity;
+    String humidString = blank+"Humidity: "+averageHumidity;
     Particle.publish("Hdata:", humidString, PRIVATE);
 
     //Get and publish temperature
-    String tempString = blank+"Temperature: "+Si7020Temperature;
+    String tempString = blank+"Temperature: "+averageTemp;
     Particle.publish("Tdata:", tempString, PRIVATE);
 
     //Get and publish light
-    String lightString = blank+"Lightlevel: " +Si1132Visible;
+    String lightString = blank+"Lightlevel: " +averageLight;
     Particle.publish("Ldata:", lightString, PRIVATE);
     /*
     Publish to Thingspeak and populate fields 1,2,3 accordingly
     we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
     on the particle dashboard.
     */
-    Particle.publish("CustomServer", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
-       "\"2\": \"" + String(Si7020Humidity) + "\"," +
-       "\"3\": \"" + String(Si1132Visible) + "\"," +
-       "\"k\": \"" + key + "\" }", PRIVATE);
+
+    Particle.publish("thingSpeakWrite_All", "{ \"1\": \"" + String(averageTemp) + "\"," +
+       "\"2\": \"" + String(averageHumidity) + "\"," +
+       "\"3\": \"" + String(averageLight) + "\"," +
+       "\"k\": \"" + key + "\" }", 60, PRIVATE);
 
     delay(SLEEP_DELAY); //Stay awake for a while
 
@@ -229,8 +246,8 @@ void loop(void)
     //digitalWrite(I2CEN, LOW);
     //digitalWrite(ALGEN, LOW);
 
-    // interrupts();
-    // System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
+    interrupts();
+    System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
   }
 
 void readMPU9150()
