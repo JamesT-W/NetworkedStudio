@@ -50,9 +50,7 @@ When you're ready to compile your project, make sure you have the correct Partic
 - Any libraries stored under `lib/<libraryname>/src`
 
 /***************************************************************************************/
-
-
-<<<<<<<<<HOW TO GET THIS BRANCH TO WORK PROPERLY>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+              ----HOW TO GET THIS BRANCH TO WORK-----
 
 Simply compiling and flashing the code to your device is not enough. Follow these steps to get your photon to publish to our server:
 
@@ -76,7 +74,26 @@ Simply compiling and flashing the code to your device is not enough. Follow thes
    "noDefaults": true
 }
 
-
 4. Click create webhook.
 
+5. Create a new webhook and repeat process for this webhook (used for motion and sound detection)
+
+{ 
+    "event": "Motion", 
+    "url": "http://47.88.159.162:8000/webapp/api/", 
+    "requestType": "POST",
+    "json": { 
+        "key": "{{k}}", 
+        "motion":"{{4}}",
+        "datatype":"{{datatype}}",
+        "time": "{{PARTICLE_PUBLISHED_AT}}" 
+        
+    }, 
+        "noDefaults": true 
+    
+}
+
 You can now flash the project firmware to your photon and it will post updates on the server.
+
+
+
