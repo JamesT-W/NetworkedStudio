@@ -68,6 +68,10 @@ bool ACCELOK = false;
 int cx, cy, cz, ax, ay, az, gx, gy, gz;
 double tm; //// Celsius
 
+int router1Value = 0;
+int router2Value = 0;
+int photon1Value = 0;
+
 //// ***************************************************************************
 
 //// SYSTEM_MODE(SEMI_AUTOMATIC);
@@ -196,14 +200,52 @@ void loop(void)
       WiFiAccessPoint& ap = aps[i];
       Serial.print("SSID: ");
       Serial.println(ap.ssid);
-      Serial.print("Security: ");
-      Serial.println(ap.security);
-      Serial.print("Channel: ");
-      Serial.println(ap.channel);
       Serial.print("RSSI: ");
       Serial.println(ap.rssi);
+
+      String currentSSID(ap.ssid);
+
+      Serial.print("----- ");
+      Serial.println(sizeof(ap.ssid))
+
+      //YOU MIGHT NEED TO USE STRCMP RATHER THAN STRNCMP AND REMOVE THE NUMBER EG. 8 & 11
+      //YOU NEED TO SPECIFY THAT STRCMP ONLY CHECKS FOR THE SAME NUMBER OF LETTERS AS THE
+      //STRING IT IS COMPARING AGAINST THOUGH, BECAUSE CURRENTLY SIZEOF(AP.SSID) IS 33
+      //AND I THINK IT IS CHECKING THE BLANKS OR SOME SHIT
+
+      //defines rssi value for each device
+      if(strncmp(currentSSID, "SSC33X_1", 8) == 0) {
+        Serial.println("ENTERED 1");
+        router1Value = ap.rssi;
+      }
+      else if(strncmp(currentSSID, "SSC33X_2", 8) == 0) {
+        Serial.println("ENTERED 2");
+        router2Value = ap.rssi;
+      }
+      else if(strncmp(currentSSID, "Photon.HGBX", 11) == 0) {
+        Serial.println("ENTERED 3");
+        photon1Value = ap.rssi;
+      }
+    }
+    Serial.println(router1Value);
+    Serial.println(router2Value);
+    Serial.println(photon1Value);
+
+    //detects which zone sensorboard is in
+    if(photon1Value < router1Value && photon1Value < router2Value) {
+      Serial.println("Zone 3");
+    }
+    else if(router1Value < router2Value && router1Value < photon1Value) {
+      Serial.println("Zone 2");
+    }
+    else if(router2Value < router1Value && router2Value < photon1Value) {
+      Serial.println("Zone 1");
+    }
+    else {
+      Serial.println("Sensorboard is on a border between two zones.");
     }
 
+/*
     float averageSignal = 0;
 
     for(int i = 0; i < 10; i++) {
@@ -216,13 +258,17 @@ void loop(void)
     String blank = ""; //temporary
 
     String signalString = blank+"Signal Strength: "+averageSignal;
+*/
+
+
+
     /*
     Publish to Thingspeak and populate fields 1,2,3 accordingly
     we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
     on the particle dashboard.
     */
 
-    delay(10000);
+    delay(5000);
 
     /*Particle.publish("thingSpeakWrite_All", "{ \"1\": \"" + String(averageTemp) + "\"," +
        "\"2\": \"" + String(averageHumidity) + "\"," +
@@ -238,6 +284,7 @@ void loop(void)
 
     //interrupts();
     //System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
+    Serial.println("----------------");
   }
 
 void readMPU9150()
