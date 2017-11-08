@@ -231,9 +231,9 @@ void loop(void)
   */
 
   int newHour = Time.hour();
-  Serial.println(String(newHour));
   if (newHour != Hour)
   {
+    Serial.println(String(newHour));
     Hour = Time.hour();
     Serial.println("New hour. Printing environment variables.");
 
