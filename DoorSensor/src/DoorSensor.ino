@@ -220,14 +220,20 @@ void loop(void)
     String compassString = "";
     compassString = compassString+"X: "+compassX+" Y: "+compassY+" Z: "+compassZ;
 
+    String originalCompassString = "";
+    originalCompassString = originalCompassString+"X: "+originalX+" Y: "+originalY+" Z: "+originalZ;
+
     //determines if the door has been moved
-    if(compassX > originalX + 1.5 || compassY > originalY + 1.5 || compassZ > originalZ + 1.5){
+    if(compassX > originalX + 1.25 || compassY > originalY + 1.25 || compassZ > originalZ + 1.25){
       //WiFi.on();
       //while(WiFi.connecting()){} //delays until WiFi is connected before progressing further down the if loop
       //delay(1000);
+      digitalWrite(LED, HIGH);
       Particle.publish("Compass", compassString, PRIVATE);
+      Particle.publish("OriginalCompass", originalCompassString, PRIVATE);
       delay(1000);
     }
+    digitalWrite(LED, LOW);
     //delay(1000);
     //WiFi.off();
 
