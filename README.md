@@ -59,7 +59,7 @@ Simply compiling and flashing the code to your device is not enough. Follow thes
 2. Click New Integration > Webhook > Tick CustomJSON in the upper right corner
 
 3. Paste this code into the field: 
-
+```json
 {
     "event": "CustomServer",
     "url": "http://47.88.159.162:8000/webapp/api/",
@@ -74,11 +74,11 @@ Simply compiling and flashing the code to your device is not enough. Follow thes
     },
     "noDefaults": true
 }
-
+```
 4. Click create webhook.
 
 5. Create a new webhook and repeat process for this webhook (used for motion and sound detection)
-
+```json
 { 
     "event": "Motion", 
     "url": "http://47.88.159.162:8000/webapp/api/", 
@@ -93,6 +93,7 @@ Simply compiling and flashing the code to your device is not enough. Follow thes
         "noDefaults": true 
     
 }
+```
 
 You can now flash the project firmware to your photon and it will post updates on the server.
 
@@ -108,9 +109,11 @@ How to run the server:
 I 've installed all the environment needs to run the servere (Python2.7 and Django). If the server is not divided by the accounts we logged in, it should work.
 Heres the method to run the server:
 when navigated to the directory where manage.py is, run this:
+```
 python manage.py runserver 0.0.0.0:8000
+```
 
 run on 0.0.0.0 should run the server file to all ips that the vm server binding to if there's no firewall blocking it.
-for more detail please check the Django file:
+for more detail please check the Django Documents:
 
 https://www.djangoproject.com/start/
