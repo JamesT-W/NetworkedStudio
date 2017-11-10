@@ -96,5 +96,9 @@ Simply compiling and flashing the code to your device is not enough. Follow thes
 
 You can now flash the project firmware to your photon and it will post updates on the server.
 
+/***************************************************************************************/
+              ----Custom Server Code Repo-----
 
+https://github.com/cylepsy/SmartLabServer
 
+Check this repo out. The latest implementation is the untitiled folder. You would only need that to run a server
