@@ -101,4 +101,16 @@ You can now flash the project firmware to your photon and it will post updates o
 
 https://github.com/cylepsy/SmartLabServer
 
-Check this repo out. The latest implementation is the untitiled folder. You would only need that to run a server
+Check this repo out. The latest implementation is the untitiled folder. You would only need that to run a server.
+
+How to run the server:
+
+I 've installed all the environment needs to run the servere (Python2.7 and Django). If the server is not divided by the accounts we logged in, it should work.
+Heres the method to run the server:
+when navigated to the directory where manage.py is, run this:
+python manage.py runserver 0.0.0.0:8000
+
+run on 0.0.0.0 should run the server file to all ips that the vm server binding to if there's no firewall blocking it.
+for more detail please check the Django file:
+
+https://www.djangoproject.com/start/
