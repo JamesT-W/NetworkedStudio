@@ -87,6 +87,10 @@ float originalX = 0;
 float originalY = 0;
 float originalZ = 0;
 
+String DOORINFTIME = "";
+String DOORCOMTIME = "";
+bool lock = false;
+
 int mag[3]; //*******
 
 Si1132 si1132 = Si1132();
@@ -147,8 +151,10 @@ void setup()
     readMPU9150();          // reads compass, accelerometer and gyroscope
 
     originalX = getCompassX(cx);
-    originalY = getCompassX(cy);
-    originalZ = getCompassX(cz);
+    originalY = getCompassY(cy);
+    originalZ = getCompassZ(cz);
+
+    Particle.subscribe("DOORINF", DOORINF);
 }
 
 void initialiseMPU9150()
@@ -224,13 +230,15 @@ void loop(void)
     originalCompassString = originalCompassString+"X: "+originalX+" Y: "+originalY+" Z: "+originalZ;
 
     //determines if the door has been moved
-    if(compassX > originalX + 1.25 || compassY > originalY + 1.25 || compassZ > originalZ + 1.25){
+    if(compassX > originalX + 1.5 || compassY > originalY + 1.5 || compassZ > originalZ + 2) {
       //WiFi.on();
       //while(WiFi.connecting()){} //delays until WiFi is connected before progressing further down the if loop
       //delay(1000);
       digitalWrite(LED, HIGH);
       Particle.publish("Compass", compassString, PRIVATE);
       Particle.publish("OriginalCompass", originalCompassString, PRIVATE);
+      String DOORCOMTIME = String(Time.now());
+      DOORCOM(DOORCOMTIME);
       delay(1000);
     }
     digitalWrite(LED, LOW);
@@ -259,6 +267,42 @@ void loop(void)
     // Power Down Sensors
     //digitalWrite(I2CEN, LOW);
     //digitalWrite(ALGEN, LOW);
+}
+
+int DOORINF(const char *event, const char *data)
+{
+  DOORINFTIME = data;
+  Particle.publish("Infrared moved: ", DOORINFTIME, PRIVATE);
+  delay(5000);
+  myHandler(DOORINFTIME, DOORCOMTIME);
+}
+
+void DOORCOM(String DOORCOMTIME)
+{
+  Particle.publish("Compass moved: ", DOORCOMTIME, PRIVATE);
+  delay(5000);
+  myHandler(DOORINFTIME, DOORCOMTIME);
+}
+
+void myHandler(String DOORINFTIME, String DOORCOMTIME)
+{
+  /* Particle.subscribe handlers are void functions, which means they don't return anything.
+  They take two variables-- the name of your event, and any data that goes along with your event.
+  */
+  if (strcmp(DOORINFTIME,DOORCOMTIME) < 0 && strcmp(DOORINFTIME,DOORCOMTIME) > 10) {
+    Particle.publish("LEAVING", strcmp(DOORINFTIME,DOORCOMTIME));
+    Serial.println("LEAVING!");
+    Particle.publish("Leaving detected", DOORCOMTIME, PRIVATE);
+  }
+  else if (strcmp(DOORINFTIME,DOORCOMTIME) > 0 && strcmp(DOORINFTIME,DOORCOMTIME) < -10) {
+    Particle.publish("ENTERING", strcmp(DOORINFTIME,DOORCOMTIME));
+    Serial.println("ENTERING!");
+    Particle.publish("Entering detected", DOORINFTIME, PRIVATE);
+  }
+  else {
+    Serial.println("One sensor detected motion, but the other didn't. Avoiding anomaly.");
+  }
+  Particle.publish("--------------------");
 }
 
 void readMPU9150()
