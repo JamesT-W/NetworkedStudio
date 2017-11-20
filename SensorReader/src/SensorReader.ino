@@ -11,7 +11,8 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-const String key = "3"; //Thingspeak API Key
+int Hour = 0; //What time is it?
+const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -32,6 +33,19 @@ byte I2CERR, I2CADR;
 int I2CEN = D2;
 int ALGEN = D3;
 int LED = D7;
+
+/* MOTION DETECTION VARIABLES
+*/
+int inputPin = D6;  // Digital Pin D6 is used to read the output of the PIR
+int msensorState = LOW;        // Start by assuming no motion detected
+int msensorValue = 0;          // Variable for reading the inputPin (D6) status
+///////////////////////////////////////////////////////////////////////////////
+/*SOUND DETECTION VARIABLES
+*/
+int soundState = 0; //initial measurement
+int soundValue = 0; //second measurement to be compared
+bool calibration = true;
+///////////////////////////////////////////////////////////////////////////////
 
 int SOUND = A0;
 double SOUNDV = 0; //// Volts Peak-to-Peak Level/Amplitude
@@ -67,6 +81,9 @@ MPU9150 mpu9150;
 bool ACCELOK = false;
 int cx, cy, cz, ax, ay, az, gx, gy, gz;
 double tm; //// Celsius
+TCPClient client;
+const char serverURL[] = "sccug-330-03.lancs.ac.uk";
+const int serverPort = 80;
 
 //// ***************************************************************************
 
@@ -81,7 +98,8 @@ void setPinsMode()
 {
     pinMode(I2CEN, OUTPUT);
     pinMode(ALGEN, OUTPUT);
-    pinMode(LED, OUTPUT);
+    pinMode(LED, OUTPUT); //assume no motion, LED off
+    digitalWrite(LED, LOW);
 
     pinMode(SOUND, INPUT);
 
@@ -105,13 +123,26 @@ void setup()
     Wire.begin();  // Start up I2C, required for LSM303 communication
 
     // diables interrupts
-    noInterrupts();
+    noInterrupts();                                                            // DO WE NEED INTERRUPTS????
 
     // initialises the IO pins
     setPinsMode();
 
     // initialises MPU9150 inertial measure unit
     initialiseMPU9150();
+
+    Serial.begin(9600);
+
+    pinMode(LED, OUTPUT);         // Sets pin connected to photon LED as output
+    pinMode(inputPin, INPUT);     // Sets inputPin as an INPUT
+    digitalWrite(LED, LOW);       // Turns LED OFF, i.e. start by assuming no motion
+
+    Hour = Time.hour() - 1;  //Returns hour as an int (0-23). Used to only take environment readings every hour.
+    Serial.println(String(Hour));
+
+    // set TCPClient server and hosts
+
+
 }
 
 void initialiseMPU9150()
@@ -152,86 +183,159 @@ void initialiseMPU9150()
     }
 }
 
+
 void loop(void)
 {
-    //// prints device version and address
+  digitalWrite(I2CEN, HIGH);
+  digitalWrite(ALGEN, HIGH);
+  delay(500);
 
-    //Serial.print("Device version: "); Serial.println(System.version());
-    //Serial.print("Device ID: "); Serial.println(System.deviceID());
-    //Serial.print("WiFi IP: "); Serial.println(WiFi.localIP());
-
-    //// ***********************************************************************
-
-    //// powers up sensors
-    digitalWrite(I2CEN, HIGH);
-    digitalWrite(ALGEN, HIGH);
-
-    //// allows sensors time to warm up
-    delay(SENSORDELAY);     //// delay timer
-
-    //// ***********************************************************************
-
-    readMPU9150();          //// reads compass, accelerometer and gyroscope data
-    readWeatherSi7020();    //// reads humidity, temperature.
-    readWeatherSi1132();    //// reads light sensor (UV, IF, visible)
-
-
-    float pitch = getXTilt(ax, az);       //// returns device tilt along x-axis
-    float roll =  getYTilt(ay,az);        //// returns device tilt along y-axis
-
-
-    float accelX = getAccelX(ax);         //// returns scaled acceleration along x axis
-    float accelY = getAccelY(ay);         //// returns scaled acceleration along y axis
-    float accelZ = getAccelZ(az);         //// returns scaled acceleration along y axis
-    float accelXYZ =  getAccelXYZ(ax, ay, az);   //returns the vector sum of the
-                                          //acceleration along x, y and z axes
-
-    //// reads and returns sound level
-    float soundLevel = readSoundLevel();
-
-
-    /* Get and print X and Y Tilt
-    Serial.print("XTilt: "); Serial.print(getXTilt(ax, az)); Serial.print(" Degres\t");
-    Serial.print("YTilt: "); Serial.print(getYTilt(ay, az)); Serial.println(" Degrees");
-
-    String tiltString = "";
-    tiltString = tiltString+"XTilt: "+getXTilt(ax, az)+" Degrees\t"+"YTilt: "+getYTilt(ay, az)+" Degrees";
-
-    Particle.publish("TiltData",tiltString, PRIVATE); // Tilt
-    delay(PUBLISH_DELAY);
-    */
-
-    String blank = ""; //temporary
-    //Get and publish Humidity
-    String humidString = blank+"Humidity: "+Si7020Humidity;
-    Particle.publish("Hdata:", humidString, PRIVATE);
-
-    //Get and publish temperature
-    String tempString = blank+"Temperature: "+Si7020Temperature;
-    Particle.publish("Tdata:", tempString, PRIVATE);
-
-    //Get and publish light
-    String lightString = blank+"Lightlevel: " +Si1132Visible;
-    Particle.publish("Ldata:", lightString, PRIVATE);
-    /*
-    Publish to Thingspeak and populate fields 1,2,3 accordingly
-    we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
-    on the particle dashboard.
-    */
-    Particle.publish("CustomServer", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
-       "\"2\": \"" + String(Si7020Humidity) + "\"," +
-       "\"3\": \"" + String(Si1132Visible) + "\"," +
-       "\"k\": \"" + key + "\" }", PRIVATE);
-
-    delay(SLEEP_DELAY); //Stay awake for a while
-
-    // Power Down Sensors
-    //digitalWrite(I2CEN, LOW);
-    //digitalWrite(ALGEN, LOW);
-
-    // interrupts();
-    // System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
+  interrupts();
+  //Calibrate sound, measure ambient noise levels
+  if(calibration)
+  {
+    soundState = measure();
+    Serial.println("Calibrated!");
+    calibration = false;
   }
+
+  msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
+  if (msensorValue == HIGH)              // If the input pin is HIGH turn LED ON
+  {
+    digitalWrite(LED, HIGH);
+
+    if (msensorState == LOW) //Checks if sensor state has changed from its previous state
+     {
+       Serial.println("Motion has been detected!");    // If yes,  prints new state and
+       msensorState = HIGH;                            // preserves current sensor state
+       Particle.publish("IFTT", "MOTION DETECTED", PUBLIC); //Used for IFTT notifications
+       sendServer("Motion");          //tell the server motion was detected
+     }
+  }
+  else
+  {
+    digitalWrite(LED, LOW);                  // Turns LED OFF
+    if (msensorState == HIGH) //Checks if sensor state has changed from its previous state
+    {
+      Serial.println("No motion detected!");      // if yes, prints new state
+      msensorState = LOW;                    // preserves current sensor state
+    }
+  }
+
+
+  //measure sound, check if its more than ambient sound level (within threshold)
+  soundValue = measure();
+  if(soundValue > soundState + 500)
+  {
+    Serial.println("SOUND DETECTED!");
+    sendServer("Sound");                //tell the server sound was detected
+    calibration = true;
+    delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
+  }
+
+  /* Take averages of environment variables and send to server every hour
+  */
+
+  int newHour = Time.hour();
+  if (newHour != Hour)
+  {
+    Serial.println(String(newHour));
+    Hour = Time.hour();
+    Serial.println("New hour. Printing environment variables.");
+
+    float averageHumidity, averageLight, averageTemp;
+    averageTemp = averageLight = averageHumidity = 0;
+
+    for(int i = 0; i < 10; i++) {
+      readWeatherSi1132();
+      readWeatherSi7020();
+      averageLight = averageLight + Si1132Visible;
+      averageTemp = averageTemp + Si7020Temperature;
+      averageHumidity = averageHumidity + Si7020Humidity;
+      delay(1000);
+   }
+   averageLight = averageLight / 10;
+   averageTemp = averageTemp / 10;
+   averageHumidity = averageHumidity / 10;
+
+
+  String blank = ""; //temporary
+  //Get and publish Humidity
+  String humidString = blank+"Humidity: "+averageHumidity;
+  Particle.publish("Hdata:", humidString, PRIVATE);
+
+  //Get and publish temperature
+  String tempString = blank+"Temperature: "+averageTemp;
+  Particle.publish("Tdata:", tempString, PRIVATE);
+
+  //Get and publish light
+  String lightString = blank+"Lightlevel: " +averageLight;
+  Particle.publish("Ldata:", lightString, PRIVATE);
+
+  /*
+  Publish to server and populate fields 1,2,3 accordingly
+  */
+
+  Particle.publish("CustomServer", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
+     "\"2\": \"" + String(Si7020Humidity) + "\"," +
+     "\"3\": \"" + String(Si1132Visible) + "\"," +
+     "\"k\": \"" + key + "\"," + "\"datatype\": \"" + "THL" + "\" }", PRIVATE);
+
+  }
+
+}
+
+
+//Tell the server when and where motion/sound was detected
+void sendServer(String str)
+{
+  String send = str +" detected in zone " +key +". Device ID: " +System.deviceID();
+  String dataType = "Motion";
+  Particle.publish("Motion", "{ \"4\": \"" + send + "\"," +
+  "\"k\": \"" + key  + "\"," + "\"datatype\": \"" + dataType + "\" }", PRIVATE);
+  String command = "this is a test";
+//post string data into the server directly
+      if(client.connect(serverURL, serverPort)){;
+
+      Particle.publish("TCP start","about to send post request");
+      client.println("POST /webapp/sendmotion HTTP/1.1");
+      client.println("HOST: sccug-330-03.lancs.ac.uk");
+      client.print("Content-Length: ");
+      client.println(command.length());
+      client.println("Content-Type: text/plain");
+      client.println();
+      client.print(str +" detected in zone " +key +". Device ID: " +System.deviceID() + "\n");
+      }
+}
+
+
+/*read sound, return max-min
+*/
+int measure()
+{
+  unsigned int sampleWindow = 50; // Sample window width in milliseconds (50 milliseconds = 20Hz)
+  unsigned long endWindow = millis() + sampleWindow;  // End of sample window
+
+  unsigned int signalSample = 0;
+  unsigned int signalMin = 4095; // Minimum is the lowest signal below which we assume silence
+  unsigned int signalMax = 0; // Maximum signal starts out the same as the Minimum signal
+
+  // collect data for milliseconds equal to sampleWindow
+  while (millis() < endWindow)
+  {
+      signalSample = analogRead(SOUND);
+      if (signalSample > signalMax)
+      {
+          signalMax = signalSample;  // save just the max levels
+      }
+      else if (signalSample < signalMin)
+      {
+          signalMin = signalSample;  // save just the min levels
+      }
+  }
+
+  return signalMax - signalMin;
+}
 
 void readMPU9150()
 {
