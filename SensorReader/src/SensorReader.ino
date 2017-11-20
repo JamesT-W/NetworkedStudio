@@ -80,6 +80,10 @@ double zone1Average = 0;
 double zone2Average = 0;
 double zone3Average = 0;
 
+bool switchLED = false;
+
+int lastZone = 0;
+
 //// ***************************************************************************
 
 //// SYSTEM_MODE(SEMI_AUTOMATIC);
@@ -186,34 +190,10 @@ void loop(void)
 
     //// ***********************************************************************
 
-    //// powers up sensors
-    digitalWrite(I2CEN, HIGH);
-    digitalWrite(ALGEN, HIGH);
-
     //// allows sensors time to warm up
     delay(SENSORDELAY);     //// delay timer
 
-    //// ***********************************************************************
-
-    readMPU9150();          //// reads compass, accelerometer and gyroscope data
-    readWeatherSi7020();    //// reads humidity, temperature.
-    readWeatherSi1132();    //// reads light sensor (UV, IF, visible)
-
-
-    float pitch = getXTilt(ax, az);       //// returns device tilt along x-axis
-    float roll =  getYTilt(ay,az);        //// returns device tilt along y-axis
-
-
-    float accelX = getAccelX(ax);         //// returns scaled acceleration along x axis
-    float accelY = getAccelY(ay);         //// returns scaled acceleration along y axis
-    float accelZ = getAccelZ(az);         //// returns scaled acceleration along y axis
-    float accelXYZ =  getAccelXYZ(ax, ay, az);   //returns the vector sum of the
-                                          //acceleration along x, y and z axes
-
-    //// reads and returns sound level
-    float soundLevel = readSoundLevel();
-
-    for(int counter=0; counter<10; counter++)
+    for(int counter=0; counter<3; counter++)
     {
       WiFiAccessPoint aps[20];
       int found = WiFi.scan(aps, 20);
@@ -259,9 +239,7 @@ void loop(void)
         }
 
         // EAST SIDE
-
-        //CHANGE NOT OURS
-        else if(newString =="Photon-QTPB") {
+        else if(newString =="Photon-DV78") {
           Serial.print(newString);
           Serial.print(ap.rssi);
           Serial.println("- NORTH EAST");
@@ -289,9 +267,9 @@ void loop(void)
     //Serial.println(southWest);
 
     //averages out the two photons in each zone
-    zone1Average = (northWest + northEast) / 20;
-    zone2Average = (west + east) / 20;
-    zone3Average = (southWest + southEast) / 20;
+    zone1Average = (northWest + northEast);
+    zone2Average = (west + east);
+    zone3Average = (southWest + southEast);
 
     Serial.print("Zone 1 average: ");
     Serial.println(zone1Average);
@@ -300,24 +278,49 @@ void loop(void)
     Serial.print("Zone 3 average: ");
     Serial.println(zone3Average);
 
+    String blank = ""; //temporary
+    String printZone = "";
+
     //detects which zone sensorboard is in
-    if(zone3Average > zone2Average && zone3Average > zone1Average) {
+    if(zone3Average == zone2Average || zone3Average == zone2Average + 50 && zone3Average == zone2Average - 50 && zone3Average > zone1Average){
+      Serial.println("Sensorboard is on the Zone3/Zone2 Border.");
+      printZone = "Zone3/Zone2 Border";
+      lastZone = 32;
+    }
+    else if(zone1Average == zone2Average || zone1Average == zone2Average + 50 && zone1Average == zone2Average - 50 && zone1Average > zone3Average){
+      Serial.println("Sensorboard is on the Zone1/Zone2 Border.");
+      printZone = "Zone1/Zone2 Border";
+      lastZone = 12;
+    }
+    else if(lastZone != 1 && zone3Average > zone2Average && zone3Average > zone1Average) {
       Serial.println("Zone 3");
+      printZone = "Zone 3";
+      lastZone = 3;
     }
     else if(zone2Average > zone1Average && zone2Average > zone3Average) {
       Serial.println("Zone 2");
+      printZone = "Zone 2";
+      lastZone = 2;
     }
-    else if(zone1Average > zone2Average && zone1Average > zone3Average) {
+    else if(lastZone != 3 &&zone1Average > zone2Average && zone1Average > zone3Average) {
       Serial.println("Zone 1");
-    }
-    else if(zone3Average == zone2Average && zone3Average > zone1Average){
-      Serial.println("Sensorboard is on the Zone3/Zone2 Border.");
-    }
-    else if(zone1Average == zone2Average && zone1Average > zone3Average){
-      Serial.println("Sensorboard is on the Zone1/Zone2 Border.");
+      printZone = "Zone 1";
+      lastZone = 1;
     }
     else{
       Serial.println("Some random issue idk");
+      printZone = "Zone Error";
+    }
+    String locationPrint = blank+ printZone;
+    Particle.publish("WiFiMove:", locationPrint, PUBLIC);
+
+    if(switchLED == false) {
+      digitalWrite(LED, HIGH);
+      switchLED = true;
+    }
+    else {
+      digitalWrite(LED, LOW);
+      switchLED = false;
     }
 
 /*
