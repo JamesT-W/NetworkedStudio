@@ -269,7 +269,7 @@ void loop(void)
     //digitalWrite(ALGEN, LOW);
 }
 
-int DOORINF(const char *event, const char *data)
+void DOORINF(const char *event, const char *data)
 {
   DOORINFTIME = data;
   Particle.publish("Infrared moved: ", DOORINFTIME, PRIVATE);
