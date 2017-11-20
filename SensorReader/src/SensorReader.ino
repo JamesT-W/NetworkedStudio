@@ -13,6 +13,9 @@
 
 const String key = "TQFYMX1U1Q7AGIFT"; //Thingspeak API Key
 
+String dataBorder1 = "";
+String dataBorder2 = "";
+
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
@@ -128,6 +131,23 @@ void setup()
 
     // initialises MPU9150 inertial measure unit
     initialiseMPU9150();
+
+    Particle.subscribe("Border1/2:", BORDER1);
+    Particle.subscribe("Border2/3:", BORDER2);
+}
+
+void BORDER1(const char *event, const char *data) // const char *data
+{
+  dataBorder1 = data;
+  dataBorder1.remove(0,6);
+  Particle.publish("Data Border 1/2", dataBorder1, PRIVATE);
+}
+
+void BORDER2(const char *event, const char *data)
+{
+  dataBorder2 = data;
+  dataBorder2.remove(0,6);
+  Particle.publish("Data Border 2/3", dataBorder2, PRIVATE);
 }
 
 void initialiseMPU9150()
@@ -171,198 +191,6 @@ void initialiseMPU9150()
 void loop(void)
 {
 
-   west = 0;
-   northWest = 0;
-   southWest = 0;
-
-   east = 0;
-   northEast = 0;
-   southEast = 0;
-
-   zone1Average = 0;
-   zone2Average = 0;
-   zone3Average = 0;
-    //// prints device version and address
-
-    //Serial.print("Device version: "); Serial.println(System.version());
-    //Serial.print("Device ID: "); Serial.println(System.deviceID());
-    //Serial.print("WiFi IP: "); Serial.println(WiFi.localIP());
-
-    //// ***********************************************************************
-
-    //// allows sensors time to warm up
-    delay(SENSORDELAY);     //// delay timer
-
-    for(int counter=0; counter<3; counter++)
-    {
-      WiFiAccessPoint aps[20];
-      int found = WiFi.scan(aps, 20);
-      Serial.println("test");
-      for (int i=0; i<found; i++) {
-        WiFiAccessPoint& ap = aps[i];
-        //Serial.print("SSID: ");
-        //Serial.println(ap.ssid);
-        //Serial.print("RSSI: ");
-        //Serial.println(ap.rssi);
-
-        String currentSSID(ap.ssid);
-
-        String newString = ap.ssid;
-
-        //YOU MIGHT NEED TO USE STRCMP RATHER THAN STRNCMP AND REMOVE THE NUMBER EG. 8 & 11
-        //YOU NEED TO SPECIFY THAT STRCMP ONLY CHECKS FOR THE SAME NUMBER OF LETTERS AS THE
-        //STRING IT IS COMPARING AGAINST THOUGH, BECAUSE CURRENTLY SIZEOF(AP.SSID) IS 33
-        //AND I THINK IT IS CHECKING THE BLANKS OR SOME SHIT
-
-        //defines rssi value for each device
-
-        // WEST SIDE
-
-        if(newString == "Photon-RM2T" ) {
-          Serial.print(newString);
-          Serial.print(ap.rssi);
-          Serial.println("- NORTH WEST");
-          northWest += ap.rssi;
-        }
-
-        else if(newString == "Photon-HGBX") {
-          Serial.print(newString);
-          Serial.print(ap.rssi);
-          Serial.println("- WEST");
-          west += ap.rssi;
-        }
-        else if(newString =="Photon-WV3F") {
-          Serial.print(newString);
-          Serial.print(ap.rssi);
-          Serial.println("- SOUTH WEST");
-          southWest += ap.rssi;
-        }
-
-        // EAST SIDE
-        else if(newString =="Photon-DV78") {
-          Serial.print(newString);
-          Serial.print(ap.rssi);
-          Serial.println("- NORTH EAST");
-          northEast += ap.rssi;
-        }
-
-        else if(newString =="Photon-ARDE") {
-          Serial.print(newString);
-          Serial.print(ap.rssi);
-          Serial.println("- EAST");
-          east += ap.rssi;
-        }
-
-        else if(newString =="Photon-5D78") {
-          Serial.print(newString);
-          Serial.print(ap.rssi);
-          Serial.println("- SOUTH EAST");
-          southEast += ap.rssi;
-        }
-      }
-      delay(100);
-    }
-    //Serial.println(west);
-    //Serial.println(northWest);
-    //Serial.println(southWest);
-
-    //averages out the two photons in each zone
-    zone1Average = (northWest + northEast);
-    zone2Average = (west + east);
-    zone3Average = (southWest + southEast);
-
-    Serial.print("Zone 1 average: ");
-    Serial.println(zone1Average);
-    Serial.print("Zone 2 average: ");
-    Serial.println(zone2Average);
-    Serial.print("Zone 3 average: ");
-    Serial.println(zone3Average);
-
-    String blank = ""; //temporary
-    String printZone = "";
-
-    //detects which zone sensorboard is in
-    if(zone3Average == zone2Average || zone3Average == zone2Average + 50 && zone3Average == zone2Average - 50 && zone3Average > zone1Average){
-      Serial.println("Sensorboard is on the Zone3/Zone2 Border.");
-      printZone = "Zone3/Zone2 Border";
-      lastZone = 32;
-    }
-    else if(zone1Average == zone2Average || zone1Average == zone2Average + 50 && zone1Average == zone2Average - 50 && zone1Average > zone3Average){
-      Serial.println("Sensorboard is on the Zone1/Zone2 Border.");
-      printZone = "Zone1/Zone2 Border";
-      lastZone = 12;
-    }
-    else if(lastZone != 1 && zone3Average > zone2Average && zone3Average > zone1Average) {
-      Serial.println("Zone 3");
-      printZone = "Zone 3";
-      lastZone = 3;
-    }
-    else if(zone2Average > zone1Average && zone2Average > zone3Average) {
-      Serial.println("Zone 2");
-      printZone = "Zone 2";
-      lastZone = 2;
-    }
-    else if(lastZone != 3 &&zone1Average > zone2Average && zone1Average > zone3Average) {
-      Serial.println("Zone 1");
-      printZone = "Zone 1";
-      lastZone = 1;
-    }
-    else{
-      Serial.println("Some random issue idk");
-      printZone = "Zone Error";
-    }
-    String locationPrint = blank+ printZone;
-    Particle.publish("WiFiMove:", locationPrint, PUBLIC);
-
-    if(switchLED == false) {
-      digitalWrite(LED, HIGH);
-      switchLED = true;
-    }
-    else {
-      digitalWrite(LED, LOW);
-      switchLED = false;
-    }
-
-/*
-    float averageSignal = 0;
-
-    for(int i = 0; i < 10; i++) {
-      averageSignal = averageSignal + WiFi.RSSI();
-      delay(1000);
-   }
-   averageSignal = averageSignal / 10;
-
-
-    String blank = ""; //temporary
-
-    String signalString = blank+"Signal Strength: "+averageSignal;
-*/
-
-
-
-    /*
-    Publish to Thingspeak and populate fields 1,2,3 accordingly
-    we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
-    on the particle dashboard.
-    */
-
-    //delay(5000);
-
-    /*Particle.publish("thingSpeakWrite_All", "{ \"1\": \"" + String(averageTemp) + "\"," +
-       "\"2\": \"" + String(averageHumidity) + "\"," +
-       "\"3\": \"" + String(averageLight) + "\"," +
-       "\"k\": \"" + key + "\" }", 60, PRIVATE);
-       */
-
-    //delay(SLEEP_DELAY); //Stay awake for a while
-
-    // Power Down Sensors
-    //digitalWrite(I2CEN, LOW);
-    //digitalWrite(ALGEN, LOW);
-
-    //interrupts();
-    //System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
-    Serial.println("----------------");
 }
 
 void readMPU9150()
