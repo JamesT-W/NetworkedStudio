@@ -11,7 +11,7 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-int Hour = 0; //What time is it?
+int Hour = 0; //Current hour (0-23)
 const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
@@ -81,9 +81,10 @@ MPU9150 mpu9150;
 bool ACCELOK = false;
 int cx, cy, cz, ax, ay, az, gx, gy, gz;
 double tm; //// Celsius
-TCPClient client;
-const char serverURL[] = "sccug-330-03.lancs.ac.uk";
-const int serverPort = 80;
+
+TCPClient client;  //used to connect to the server
+const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
+const int serverPort = 80;  //port
 
 //// ***************************************************************************
 
@@ -139,8 +140,6 @@ void setup()
 
     Hour = Time.hour() - 1;  //Returns hour as an int (0-23). Used to only take environment readings every hour.
     Serial.println(String(Hour));
-
-    // set TCPClient server and hosts
 
 
 }
@@ -272,14 +271,7 @@ void loop(void)
   String lightString = blank+"Lightlevel: " +averageLight;
   Particle.publish("Ldata:", lightString, PRIVATE);
 
-  /*
-  Publish to server and populate fields 1,2,3 accordingly
-  */
-
-  Particle.publish("CustomServer", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
-     "\"2\": \"" + String(Si7020Humidity) + "\"," +
-     "\"3\": \"" + String(Si1132Visible) + "\"," +
-     "\"k\": \"" + key + "\"," + "\"datatype\": \"" + "THL" + "\" }", PRIVATE);
+  sendEnv(); //send environment readings to server
 
   }
 
@@ -290,14 +282,12 @@ void loop(void)
 void sendServer(String str)
 {
   String send = str +" detected in zone " +key +". Device ID: " +System.deviceID();
-  String dataType = "Motion";
-  Particle.publish("Motion", "{ \"4\": \"" + send + "\"," +
-  "\"k\": \"" + key  + "\"," + "\"datatype\": \"" + dataType + "\" }", PRIVATE);
-  String command = "this is a test";
-//post string data into the server directly
-      if(client.connect(serverURL, serverPort)){;
+  String command = "this is a test"; //debug
 
-      Particle.publish("TCP start","about to send post request");
+  //post string data into the server directly
+  if(client.connect(serverURL, serverPort)){;
+
+      Particle.publish("TCP start","about to send post request"); //debug
       client.println("POST /webapp/sendmotion HTTP/1.1");
       client.println("HOST: sccug-330-03.lancs.ac.uk");
       client.print("Content-Length: ");
@@ -305,7 +295,28 @@ void sendServer(String str)
       client.println("Content-Type: text/plain");
       client.println();
       client.print(str +" detected in zone " +key +". Device ID: " +System.deviceID() + "\n");
-      }
+  }
+}
+
+void sendEnv()
+{
+  if(client.connect(serverURL, serverPort)){;
+
+  String command = "this is an env test"; //debug
+  Particle.publish("Environment","about to send env post req"); //debug
+  client.println("POST /webapp/api HTTP/1.1");
+  client.println("HOST: sccug-330-03.lancs.ac.uk");
+  client.print("Content-Length: ");
+  client.println(command.length());
+  client.println("Content-Type: application/json");
+  client.println();
+  //send JSON:
+  client.print("{ \"1\": \"" + String(Si7020Temperature) + "\"," +
+     "\"2\": \"" + String(Si7020Humidity) + "\"," +
+     "\"3\": \"" + String(Si1132Visible) + "\"," +
+     "\"k\": \"" + key + "\"," + "\"datatype\": \"" + "THL" + "\" }");
+  }
+
 }
 
 
