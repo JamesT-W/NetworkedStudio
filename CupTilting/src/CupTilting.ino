@@ -3,7 +3,7 @@
 #include "Si70xx.h"
 #include "math.h"
 
-//// ***************************************************************************
+//https://thingspeak.com/channels/350722
 
 //// Initialize application variables
 #define RAD_TO_DEGREES 57.2957795131
@@ -11,9 +11,9 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-int Hour = 0; //What time is it?
-const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
+const String key = "S2D4YAIF6ACZHHMG"; //Thingspeak API Key
 
+int PUBLISH_DELAY = 400; //adds a delay to make publishing less frequent
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
 int SENSORDELAY = 500;  //// 500; //3000; // milliseconds (runs x1)
@@ -33,19 +33,6 @@ byte I2CERR, I2CADR;
 int I2CEN = D2;
 int ALGEN = D3;
 int LED = D7;
-
-/* MOTION DETECTION VARIABLES
-*/
-int inputPin = D6;  // Digital Pin D6 is used to read the output of the PIR
-int msensorState = LOW;        // Start by assuming no motion detected
-int msensorValue = 0;          // Variable for reading the inputPin (D6) status
-///////////////////////////////////////////////////////////////////////////////
-/*SOUND DETECTION VARIABLES
-*/
-int soundState = 0; //initial measurement
-int soundValue = 0; //second measurement to be compared
-bool calibration = true;
-///////////////////////////////////////////////////////////////////////////////
 
 int SOUND = A0;
 double SOUNDV = 0; //// Volts Peak-to-Peak Level/Amplitude
@@ -82,6 +69,21 @@ bool ACCELOK = false;
 int cx, cy, cz, ax, ay, az, gx, gy, gz;
 double tm; //// Celsius
 
+//float initialAccelX = 0;
+//float initialAccelY = 0;
+//float initialAccelZ = 0;
+//float initialAccelXYZ = 0;
+float initialTiltX = 0;
+//float initialTiltY = 0;
+int oldXTiltValue = 0;  //the xTiltValue stored at the end of the loop for the next loop
+
+//float newAccelX = 0;
+//float newAccelY = 0;
+//float newAccelZ = 0;
+//float newAccelXYZ = 0;
+float newTiltX = 0;
+//float newTiltY = 0;
+
 //// ***************************************************************************
 
 //// SYSTEM_MODE(SEMI_AUTOMATIC);
@@ -95,8 +97,7 @@ void setPinsMode()
 {
     pinMode(I2CEN, OUTPUT);
     pinMode(ALGEN, OUTPUT);
-    pinMode(LED, OUTPUT); //assume no motion, LED off
-    digitalWrite(LED, LOW);
+    pinMode(LED, OUTPUT);
 
     pinMode(SOUND, INPUT);
 
@@ -120,7 +121,7 @@ void setup()
     Wire.begin();  // Start up I2C, required for LSM303 communication
 
     // diables interrupts
-    noInterrupts();                                                            // DO WE NEED INTERRUPTS????
+    noInterrupts();
 
     // initialises the IO pins
     setPinsMode();
@@ -128,14 +129,23 @@ void setup()
     // initialises MPU9150 inertial measure unit
     initialiseMPU9150();
 
-    Serial.begin(9600);
+/*
+    int counter = 50;
+    for (int i=0; i<counter; i++) { //get's an average for the initial values
+      delay(100);
+      readMPU9150();          //// reads compass, accelerometer and gyroscope data
 
-    pinMode(LED, OUTPUT);         // Sets pin connected to photon LED as output
-    pinMode(inputPin, INPUT);     // Sets inputPin as an INPUT
-    digitalWrite(LED, LOW);       // Turns LED OFF, i.e. start by assuming no motion
+      //initialAccelX += getAccelX(ax); initialAccelY += getAccelY(ay); initialAccelZ += getAccelZ(az);
+      //initialAccelXYZ +=  getAccelXYZ(ax, ay, az);
+      initialTiltX += getXTilt(ax,az);  //initialTiltY += getYTilt(ay,az);
+    }
+*/
 
-    Hour = Time.hour() - 1;  //Returns hour as an int (0-23). Used to only take environment readings every hour.
-    Serial.println(String(Hour));
+    //initialAccelX = initialAccelX / 50; initialAccelY = initialAccelY / 50; initialAccelZ = initialAccelZ / 50;
+    //initialAccelXYZ = initialAccelXYZ / 50;
+    //initialTiltX = initialTiltX / counter; //initialTiltY = initialTiltY / 50;
+    initialTiltX = 90;
+    oldXTiltValue = 100;
 
 }
 
@@ -177,145 +187,127 @@ void initialiseMPU9150()
     }
 }
 
-
 void loop(void)
 {
-  digitalWrite(I2CEN, HIGH);
-  digitalWrite(ALGEN, HIGH);
-  delay(500);
+    //// prints device version and address
 
-  interrupts();
-  //Calibrate sound, measure ambient noise levels
-  if(calibration)
-  {
-    soundState = measure();
-    Serial.println("Calibrated!");
-    calibration = false;
-  }
+    //Serial.print("Device version: "); Serial.println(System.version());
+    //Serial.print("Device ID: "); Serial.println(System.deviceID());
+    //Serial.print("WiFi IP: "); Serial.println(WiFi.localIP());
 
-  msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
-  if (msensorValue == HIGH)              // If the input pin is HIGH turn LED ON
-  {
-    digitalWrite(LED, HIGH);
+    //// ***********************************************************************
 
-    if (msensorState == LOW) //Checks if sensor state has changed from its previous state
-     {
-       Serial.println("Motion has been detected!");    // If yes,  prints new state and
-       msensorState = HIGH;                            // preserves current sensor state
-       Particle.publish("IFTT", "MOTION DETECTED", PUBLIC); //Used for IFTT notifications
-       sendServer("Motion");          //tell the server motion was detected
-     }
-  }
-  else
-  {
-    digitalWrite(LED, LOW);                  // Turns LED OFF
-    if (msensorState == HIGH) //Checks if sensor state has changed from its previous state
-    {
-      Serial.println("No motion detected!");      // if yes, prints new state
-      msensorState = LOW;                    // preserves current sensor state
+    //// powers up sensors
+    digitalWrite(I2CEN, HIGH);
+    digitalWrite(ALGEN, HIGH);
+
+    //// allows sensors time to warm up
+    delay(SENSORDELAY);     //// delay timer
+
+    //// ***********************************************************************
+
+    readMPU9150();          //// reads compass, accelerometer and gyroscope data
+    //readWeatherSi7020();    //// reads humidity, temperature.
+    //readWeatherSi1132();    //// reads light sensor (UV, IF, visible)
+
+    //// reads and returns sound level
+    //float soundLevel = readSoundLevel();
+
+    //delay(PUBLISH_DELAY); //publish less often
+
+    delay(100);
+
+    readMPU9150(); //reads new values to compare against old values
+
+    //newAccelX = getAccelX(ax);  newAccelY = getAccelY(ay);  newAccelZ = getAccelZ(az);
+    newTiltX = getXTilt(ax, az);  //newTiltY = getYTilt(ay, az);
+
+    //accelleration change checker
+    /*String accelString = "";
+    accelString = accelString+"AccelX: "+newAccelX+"\t" + "AccelY: "+newAccelY+"\t" + "AccelZ: "+newAccelZ+"\t";*/
+
+    float XTiltFraction = (newTiltX / initialTiltX) * 100;
+    int XTiltValue = round(XTiltFraction/1)*1;
+
+    bool reversed = false;
+    String percentFull = "";
+
+    //TiltValue is a percentage. 100 is vertically upright
+    if (XTiltValue >= 95 && XTiltValue <= 105) {  //if nearly full, make full
+      XTiltValue = 100;
     }
-  }
+    else if (XTiltValue <= 5 || XTiltValue >= 395) {  //if nearly empty, make empty
+      XTiltValue = 0;
+    }
+    else if (XTiltValue > 105 && XTiltValue <= 195) { //if tilting in reverse direction, reverse values
+      float reverseDifference = initialTiltX - XTiltValue;
+      float reverseTotal = initialTiltX + reverseDifference;
+      XTiltValue = round(reverseTotal/1)*1;
+      XTiltValue += 20;
+      reversed = true;
+    }
+    else if (XTiltValue > 195 && XTiltValue < 395) {  //if anything else, make empty
+      XTiltValue = 0;
+    }
 
+    //stops water level value from going up and down
+    if (XTiltValue > oldXTiltValue) {
+      XTiltValue = oldXTiltValue;
+    }
 
-  //measure sound, check if its more than ambient sound level (within threshold)
-  soundValue = measure();
-  if(soundValue > soundState + 500)
-  {
-    Serial.println("SOUND DETECTED!");
-    sendServer("Sound");                //tell the server sound was detected
-    calibration = true;
-    delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
-  }
+    //if the cup is empty, stay empty until refilled
+    while (XTiltValue == 0) {
+      delay(500);
 
-  /* Take averages of environment variables and send to server every hour
-  */
+      readMPU9150(); //reads new values to compare against old values
+      float newTiltX2 = getXTilt(ax, az);
 
-  int newHour = Time.hour();
-  if (newHour != Hour)
-  {
-    Serial.println(String(newHour));
-    Hour = Time.hour();
-    Serial.println("New hour. Printing environment variables.");
+      float XTiltFraction2 = (newTiltX2 / initialTiltX) * 100;
+      int XTiltValue2 = round(XTiltFraction2/1)*1;
 
-    float averageHumidity, averageLight, averageTemp;
-    averageTemp = averageLight = averageHumidity = 0;
-
-    for(int i = 0; i < 10; i++) {
-      readWeatherSi1132();
-      readWeatherSi7020();
-      averageLight = averageLight + Si1132Visible;
-      averageTemp = averageTemp + Si7020Temperature;
-      averageHumidity = averageHumidity + Si7020Humidity;
-      delay(1000);
-   }
-   averageLight = averageLight / 10;
-   averageTemp = averageTemp / 10;
-   averageHumidity = averageHumidity / 10;
-
-
-  String blank = ""; //temporary
-  //Get and publish Humidity
-  String humidString = blank+"Humidity: "+averageHumidity;
-  Particle.publish("Hdata:", humidString, PRIVATE);
-
-  //Get and publish temperature
-  String tempString = blank+"Temperature: "+averageTemp;
-  Particle.publish("Tdata:", tempString, PRIVATE);
-
-  //Get and publish light
-  String lightString = blank+"Lightlevel: " +averageLight;
-  Particle.publish("Ldata:", lightString, PRIVATE);
-
-  /*
-  Publish to server and populate fields 1,2,3 accordingly
-  */
-
-  Particle.publish("CustomServer", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
-     "\"2\": \"" + String(Si7020Humidity) + "\"," +
-     "\"3\": \"" + String(Si1132Visible) + "\"," +
-     "\"k\": \"" + key + "\"," + "\"datatype\": \"" + "THL" + "\" }", PRIVATE);
-
-  }
-
-}
-
-
-//Tell the server when and where motion/sound was detected
-void sendServer(String str)
-{
-  String send = str +" detected in zone " +key +". Device ID: " +System.deviceID();
-  String dataType = "Motion";
-  Particle.publish("Motion", "{ \"4\": \"" + send + "\"," +
-  "\"k\": \"" + key  + "\"," + "\"datatype\": \"" + dataType + "\" }", PRIVATE);
-}
-
-/*read sound, return max-min
-*/
-int measure()
-{
-  unsigned int sampleWindow = 50; // Sample window width in milliseconds (50 milliseconds = 20Hz)
-  unsigned long endWindow = millis() + sampleWindow;  // End of sample window
-
-  unsigned int signalSample = 0;
-  unsigned int signalMin = 4095; // Minimum is the lowest signal below which we assume silence
-  unsigned int signalMax = 0; // Maximum signal starts out the same as the Minimum signal
-
-  // collect data for milliseconds equal to sampleWindow
-  while (millis() < endWindow)
-  {
-      signalSample = analogRead(SOUND);
-      if (signalSample > signalMax)
-      {
-          signalMax = signalSample;  // save just the max levels
+      //if the cup has tilted in the reversed direction
+      if (reversed == true) {
+        float reverseDifference2 = initialTiltX - XTiltValue2;
+        float reverseTotal2 = initialTiltX + reverseDifference2;
+        XTiltValue2 = round(reverseTotal2/1)*1;
+        XTiltValue2 += 20;
       }
-      else if (signalSample < signalMin)
-      {
-          signalMin = signalSample;  // save just the min levels
-      }
-  }
 
-  return signalMax - signalMin;
-}
+      //cup is upright and needs to be refilled
+      if (XTiltValue2 > 80 && XTiltValue2 < 120) {
+        percentFull = 100;
+        Particle.publish("Refilled!", percentFull, PRIVATE);
+        XTiltValue = 100;
+        break;
+      }
+      else {  //drink remains empty
+        XTiltValue = 0;
+      }
+
+      percentFull = XTiltValue;
+      Particle.publish("Empty - Refill Needed", percentFull, PRIVATE);
+    }
+
+    oldXTiltValue = XTiltValue;
+
+    percentFull = XTiltValue;
+    Particle.publish("Percent Full", percentFull, PRIVATE);
+
+    delay(500);
+
+    /*Publish to Thingspeak and populate fields 1,2,3 accordingly
+    we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
+    on the particle dashboard.*/
+
+    //delay(SLEEP_DELAY); //Stay awake for a while
+
+    // Power Down Sensors
+    //digitalWrite(I2CEN, LOW);
+    //digitalWrite(ALGEN, LOW);
+
+    //interrupts();
+    //System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
+  }
 
 void readMPU9150()
 {
