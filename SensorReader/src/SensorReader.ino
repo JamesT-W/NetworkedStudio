@@ -173,7 +173,6 @@ void loop(void)
   int signalStrength = WiFi.RSSI();
   String blank = ""; //temporary
   String signalString = blank+"WiFi: "+signalStrength;
-  // .remove(index)
   Particle.publish("Border1/2:", signalString, PRIVATE);
   delay(1000);
 }
