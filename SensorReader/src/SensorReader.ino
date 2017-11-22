@@ -86,6 +86,8 @@ TCPClient client;  //used to connect to the server
 const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
 const int serverPort = 80;  //port
 
+LEDStatus blinkRed(RGB_COLOR_RED, LED_PATTERN_BLINK);
+
 //// ***************************************************************************
 
 //// SYSTEM_MODE(SEMI_AUTOMATIC);
@@ -141,7 +143,18 @@ void setup()
     Hour = Time.hour() - 1;  //Returns hour as an int (0-23). Used to only take environment readings every hour.
     Serial.println(String(Hour));
 
+    connectVM();
 
+}
+
+//attempt to connect to VMserver, blink red if unable to
+void connectVM(){
+  if(client.connect(serverURL, serverPort) != true)
+  {
+    blinkRed.setActive(true);
+    delay(3000);
+    blinkRed.setActive(false);
+  }
 }
 
 void initialiseMPU9150()
@@ -190,6 +203,12 @@ void loop(void)
   delay(500);
 
   interrupts();
+
+  if(client.connected() != true)
+  {
+    connectVM();
+  }
+
   //Calibrate sound, measure ambient noise levels
   if(calibration)
   {
@@ -285,25 +304,24 @@ void sendServer(String str)
   String command = "this is a test"; //debug
 
   //post string data into the server directly
-  if(client.connect(serverURL, serverPort)){;
 
-      Particle.publish("TCP start","about to send post request"); //debug
-      client.println("POST /webapp/sendmotion HTTP/1.1");
-      client.println("HOST: sccug-330-03.lancs.ac.uk");
-      client.print("Content-Length: ");
-      client.println(command.length());
-      client.println("Content-Type: text/plain");
-      client.println();
-      client.print(str +" detected in zone " +key +". Device ID: " +System.deviceID() + "\n");
-  }
+  Serial.println("about to send post request"); //debug
+
+  client.println("POST /webapp/sendmotion HTTP/1.1");
+  client.println("HOST: sccug-330-03.lancs.ac.uk");
+  client.print("Content-Length: ");
+  client.println(command.length());
+  client.println("Content-Type: text/plain");
+  client.println();
+  client.print(str +" detected in zone " +key +". Device ID: " +System.deviceID() + "\n");
 }
 
 void sendEnv()
 {
-  if(client.connect(serverURL, serverPort)){;
-
   String command = "this is an env test"; //debug
-  Particle.publish("Environment","about to send env post req"); //debug
+
+  Serial.println("about to send env post req"); //debug
+
   client.println("POST /webapp/api HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
   client.print("Content-Length: ");
@@ -315,7 +333,6 @@ void sendEnv()
      "\"2\": \"" + String(Si7020Humidity) + "\"," +
      "\"3\": \"" + String(Si1132Visible) + "\"," +
      "\"k\": \"" + key + "\"," + "\"datatype\": \"" + "THL" + "\" }");
-  }
 
 }
 
