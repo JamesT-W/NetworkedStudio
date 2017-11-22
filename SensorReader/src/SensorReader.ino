@@ -312,7 +312,6 @@ void loop(void)
 void sendServer(String str)
 {
   String send = str +" detected in zone " +key +". Device ID: " +System.deviceID();
-  String command = "this is a test"; //debug
 
   //post string data into the server directly
 
@@ -321,7 +320,7 @@ void sendServer(String str)
   client.println("POST /webapp/sendmotion HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
   client.print("Content-Length: ");
-  client.println(command.length());
+  client.println(send.length());
   client.println("Content-Type: text/plain");
   client.println();
   client.print(str +" detected in zone " +key +". Device ID: " +System.deviceID() + "\n");
@@ -329,21 +328,21 @@ void sendServer(String str)
 
 void sendEnv()
 {
-  String command = "this is an env test"; //debug
+  String send = "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
+     "\"2\": \"" + String(Si7020Humidity) + "\"," +
+     "\"3\": \"" + String(Si1132Visible) + "\"," +
+     "\"k\": \"" + key + "\"," + "\"datatype\": \"" + "THL" + "\" }";
 
   Serial.println("about to send env post req"); //debug
 
   client.println("POST /webapp/api HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
   client.print("Content-Length: ");
-  client.println(command.length());
+  client.println(send.length());
   client.println("Content-Type: application/json");
   client.println();
   //send JSON:
-  client.print("{ \"1\": \"" + String(Si7020Temperature) + "\"," +
-     "\"2\": \"" + String(Si7020Humidity) + "\"," +
-     "\"3\": \"" + String(Si1132Visible) + "\"," +
-     "\"k\": \"" + key + "\"," + "\"datatype\": \"" + "THL" + "\" }");
+  client.print(send);
 }
 
 
