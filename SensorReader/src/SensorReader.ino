@@ -317,7 +317,7 @@ void sendServer(String str)
 
   Serial.println("about to send post request"); //debug
 
-  client.println("POST /webapp/sendmotion HTTP/1.1");
+  client.println("POST /webapp/sendactivity HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
   client.print("Content-Length: ");
   client.println(send.length());
