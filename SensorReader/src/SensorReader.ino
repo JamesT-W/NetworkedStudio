@@ -14,7 +14,7 @@
 
 int Hour = 0; //Current hour (0-23)
 
-const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
+const String key = "2"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -311,7 +311,7 @@ void loop(void)
 //Tell the server when and where motion/sound was detected
 void sendServer(String str)
 {
-  String send = str +" detected in zone " +key +". Device ID: " +System.deviceID();
+  String send = str +" detected in zone " +key +". Device ID: " +System.deviceID() + " in: " + Time.timeStr();
 
   //post string data into the server directly
 
@@ -323,7 +323,7 @@ void sendServer(String str)
   client.println(send.length());
   client.println("Content-Type: text/plain");
   client.println();
-  client.print(str +" detected in zone " +key +". Device ID: " +System.deviceID() + "\n");
+  client.println(send);
 }
 
 void sendEnv()
