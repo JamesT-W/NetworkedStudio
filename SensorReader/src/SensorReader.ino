@@ -88,7 +88,7 @@ TCPClient client;  //used to connect to the server
 const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
 const int serverPort = 80;  //port
 
-LEDStatus blinkRed(RGB_COLOR_RED, LED_PATTERN_BLINK);
+LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_BLINK, LED_SPEED_SLOW);
 
 //// ***************************************************************************
 
@@ -148,14 +148,13 @@ void setup()
     connectVM();
 
 }
-
 //attempt to connect to VMserver, blink red if unable to
 void connectVM(){
   if(client.connect(serverURL, serverPort) != true)
   {
-    blinkRed.setActive(true);
+    blinkYellow.setActive(true);
     delay(3000);
-    blinkRed.setActive(false);
+    blinkYellow.setActive(false);
   }
 }
 
@@ -208,6 +207,7 @@ void loop(void)
 
   if(client.connected() != true)
   {
+    Serial.println("Connection to server lost");
     connectVM();
   }
 
@@ -228,12 +228,12 @@ void loop(void)
      {
        Serial.println("Motion has been detected!");    // If yes,  prints new state and
        msensorState = HIGH;                            // preserves current sensor state
-      
+
        //This is the part that integrates with DoorSensor
--      String timestr = String(Time.now());
--      Serial.println(timestr);
--      Particle.publish("DOORINF", timestr, PUBLIC); //Used for door open checks
-      
+       String timestr = String(Time.now());
+       Serial.println(timestr);
+       Particle.publish("DOORINF", timestr, PUBLIC); //Used for door open checks
+
        sendServer("Motion");          //tell the server motion was detected
      }
   }
@@ -279,9 +279,10 @@ void loop(void)
       averageHumidity = averageHumidity + Si7020Humidity;
       delay(1000);
    }
+
    averageLight = averageLight / 10;
    averageTemp = averageTemp / 10;
-   averageHumidity = averageHumidity / 10
+   averageHumidity = averageHumidity / 10;
 
   /* Take averages of environment variables and send to server every hour
   */
