@@ -332,7 +332,7 @@ void sendEnv()
      + String(Si7020Humidity) + "," +
       + String(Si1132Visible) + "," +
       + key + "," + Time.year() + "-"  + Time.month() + "-" + Time.day() + "-"
-      + Time.hour() + "-" + Time.minute() + "-" + Time.second();
+      + Time.hour() + "-" + Time.minute() + "-" + Time.second() + ","  + Time.now();
 
   Serial.println("about to send env post req"); //debug
 
