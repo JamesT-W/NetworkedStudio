@@ -140,7 +140,6 @@ void BORDER1(const char *event, const char *data) // const char *data
 {
   String d1 = data;
   d1.remove(0,6);
-  Serial.println(d1);
   dataBorder1 = d1.toInt();
   //Particle.publish("Data Border 1/2", dataBorder1, PRIVATE);
 }
@@ -149,8 +148,6 @@ void BORDER2(const char *event, const char *data)
 {
   String d2 = data;
   d2.remove(0,6);
-  Serial.println("HERE");
-  Serial.println(d2);
   dataBorder2 = d2.toInt();
   //Particle.publish("Data Border 2/3", dataBorder2, PRIVATE);
 }
@@ -202,13 +199,13 @@ void loop(void)
   Serial.println(dataBorder2);
   Serial.println("--------");
   if(signalStrength < dataBorder1 && signalStrength < dataBorder2){
-    Particle.publish("Zoning", "Zone 1", PRIVATE);
+    Particle.publish("Zoning", "Zone 3", PRIVATE);
   }
-  else if(signalStrength > dataBorder1 && signalStrength < dataBorder2) {
+  else if(signalStrength < dataBorder1 && signalStrength > dataBorder2) {
     Particle.publish("Zoning", "Zone 2", PRIVATE);
   }
   else if (signalStrength > dataBorder1 && signalStrength > dataBorder2){
-    Particle.publish("Zoning", "Zone 3", PRIVATE);
+    Particle.publish("Zoning", "Zone 1", PRIVATE);
   } else {
     Particle.publish("Zoning", "Border or Error", PRIVATE);
   }
