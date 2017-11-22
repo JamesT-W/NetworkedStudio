@@ -228,7 +228,12 @@ void loop(void)
      {
        Serial.println("Motion has been detected!");    // If yes,  prints new state and
        msensorState = HIGH;                            // preserves current sensor state
-       Particle.publish("IFTT", "MOTION DETECTED", PUBLIC); //Used for IFTT notifications
+      
+       //This is the part that integrates with DoorSensor
+-      String timestr = String(Time.now());
+-      Serial.println(timestr);
+-      Particle.publish("DOORINF", timestr, PUBLIC); //Used for door open checks
+      
        sendServer("Motion");          //tell the server motion was detected
      }
   }
