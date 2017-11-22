@@ -84,6 +84,10 @@ int oldXTiltValue = 0;  //the xTiltValue stored at the end of the loop for the n
 float newTiltX = 0;
 //float newTiltY = 0;
 
+int soundState = 0; //initial measurement
+int soundValue = 0; //second measurement to be compared
+bool calibration = true;
+
 //// ***************************************************************************
 
 //// SYSTEM_MODE(SEMI_AUTOMATIC);
@@ -189,125 +193,107 @@ void initialiseMPU9150()
 
 void loop(void)
 {
-    //// prints device version and address
-
-    //Serial.print("Device version: "); Serial.println(System.version());
-    //Serial.print("Device ID: "); Serial.println(System.deviceID());
-    //Serial.print("WiFi IP: "); Serial.println(WiFi.localIP());
-
-    //// ***********************************************************************
-
     //// powers up sensors
     digitalWrite(I2CEN, HIGH);
     digitalWrite(ALGEN, HIGH);
 
-    //// allows sensors time to warm up
-    delay(SENSORDELAY);     //// delay timer
-
-    //// ***********************************************************************
-
+    delay(SENSORDELAY);     //// allows sensors time to warm up
     readMPU9150();          //// reads compass, accelerometer and gyroscope data
-    //readWeatherSi7020();    //// reads humidity, temperature.
-    //readWeatherSi1132();    //// reads light sensor (UV, IF, visible)
 
-    //// reads and returns sound level
-    //float soundLevel = readSoundLevel();
+    //Calibrate sound, measure ambient noise levels
+    if(calibration) {
+      soundState = measure();
+      Serial.println("Calibrated!");
+      calibration = false;
+    }
 
-    //delay(PUBLISH_DELAY); //publish less often
+    newTiltX = getXTilt(ax, az);
 
-    delay(100);
+    float XTiltFraction = (newTiltX / initialTiltX) * 100; //turn 360 degrees into percentage (90 degrees (vertically upright) = 100%)
+    int XTiltValue = round(XTiltFraction/1)*1;  //rounds the float to an int to remove the decimal places
 
-    readMPU9150(); //reads new values to compare against old values
-
-    //newAccelX = getAccelX(ax);  newAccelY = getAccelY(ay);  newAccelZ = getAccelZ(az);
-    newTiltX = getXTilt(ax, az);  //newTiltY = getYTilt(ay, az);
-
-    //accelleration change checker
-    /*String accelString = "";
-    accelString = accelString+"AccelX: "+newAccelX+"\t" + "AccelY: "+newAccelY+"\t" + "AccelZ: "+newAccelZ+"\t";*/
-
-    float XTiltFraction = (newTiltX / initialTiltX) * 100;
-    int XTiltValue = round(XTiltFraction/1)*1;
-
-    bool reversed = false;
+    bool reversed = false;  //used if XTiltValue exceeds 100% (it should )
     String percentFull = "";
 
-    //TiltValue is a percentage. 100 is vertically upright
-    if (XTiltValue >= 95 && XTiltValue <= 105) {  //if nearly full, make full
+    //TiltValue is a percentage. 0% is horizontally empty in one direction, 100% is vertically upright,
+    //200% is horizontally empty in the other direction, and >200% is upside down, therefore empty
+    if (XTiltValue >= 95 && XTiltValue <= 105) {  //if nearly full, round up to full
       XTiltValue = 100;
     }
-    else if (XTiltValue <= 5 || XTiltValue >= 395) {  //if nearly empty, make empty
+    else if (XTiltValue <= 5 || XTiltValue >= 395) {  //if nearly empty, round down to empty
       XTiltValue = 0;
     }
-    else if (XTiltValue > 105 && XTiltValue <= 195) { //if tilting in reverse direction, reverse values
+    else if (XTiltValue > 195 && XTiltValue < 400) {  //195-200% is the rounding threshold for the reverse direction, else cup is upside down
+      XTiltValue = 0;
+    }
+    else if (XTiltValue > 105 && XTiltValue <= 195) { //if tilting in reverse direction, reverse values (when values go above 100%)
       float reverseDifference = initialTiltX - XTiltValue;
       float reverseTotal = initialTiltX + reverseDifference;
       XTiltValue = round(reverseTotal/1)*1;
       XTiltValue += 20;
       reversed = true;
     }
-    else if (XTiltValue > 195 && XTiltValue < 395) {  //if anything else, make empty
-      XTiltValue = 0;
-    }
 
-    //stops water level value from going up and down
-    if (XTiltValue > oldXTiltValue) {
+    if (XTiltValue > oldXTiltValue) { //stops water level value from increasing when a refill has not happened
       XTiltValue = oldXTiltValue;
     }
 
-    //if the cup is empty, stay empty until refilled
+    //if the cup is empty, stay empty until refilled (it refills when a loud sound is made)
     while (XTiltValue == 0) {
-      delay(500);
+      soundValue = measure(); //measure sound, check if its more than ambient sound level (within threshold)
 
-      readMPU9150(); //reads new values to compare against old values
-      float newTiltX2 = getXTilt(ax, az);
+      if(soundValue > soundState + 500) //if the sound levels have increased by a set threshold
+      {
+        Serial.println("SOUND DETECTED!");
+        calibration = true;
+        delay(2000); //delay 2 seconds before next calibration, to make sure we're back to ambient sound levels
 
-      float XTiltFraction2 = (newTiltX2 / initialTiltX) * 100;
-      int XTiltValue2 = round(XTiltFraction2/1)*1;
-
-      //if the cup has tilted in the reversed direction
-      if (reversed == true) {
-        float reverseDifference2 = initialTiltX - XTiltValue2;
-        float reverseTotal2 = initialTiltX + reverseDifference2;
-        XTiltValue2 = round(reverseTotal2/1)*1;
-        XTiltValue2 += 20;
-      }
-
-      //cup is upright and needs to be refilled
-      if (XTiltValue2 > 80 && XTiltValue2 < 120) {
         percentFull = 100;
         Particle.publish("Refilled!", percentFull, PRIVATE);
-        XTiltValue = 100;
-        break;
+        XTiltValue = 100; //breaks out of the while loop
       }
-      else {  //drink remains empty
-        XTiltValue = 0;
+      else {
+        percentFull = XTiltValue; //XTiltValue == 0 here
+        Particle.publish("Empty - Refill Needed", percentFull, PRIVATE);
+        delay(1000);
       }
-
-      percentFull = XTiltValue;
-      Particle.publish("Empty - Refill Needed", percentFull, PRIVATE);
     }
 
-    oldXTiltValue = XTiltValue;
+    oldXTiltValue = XTiltValue; //the next loop uses this loop's XTilt value in comparisons
 
     percentFull = XTiltValue;
     Particle.publish("Percent Full", percentFull, PRIVATE);
 
     delay(500);
 
-    /*Publish to Thingspeak and populate fields 1,2,3 accordingly
-    we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
-    on the particle dashboard.*/
-
-    //delay(SLEEP_DELAY); //Stay awake for a while
-
     // Power Down Sensors
     //digitalWrite(I2CEN, LOW);
     //digitalWrite(ALGEN, LOW);
+}
 
-    //interrupts();
-    //System.sleep(SLEEP_MODE_DEEP,PHOTON_SLEEP);
+/*read sound, return max-min
+*/
+int measure()
+{
+  unsigned int sampleWindow = 50; // Sample window width in milliseconds (50 milliseconds = 20Hz)
+  unsigned long endWindow = millis() + sampleWindow;  // End of sample window
+
+  unsigned int signalSample = 0;
+  unsigned int signalMin = 4095; // Minimum is the lowest signal below which we assume silence
+  unsigned int signalMax = 0; // Maximum signal starts out the same as the Minimum signal
+
+  // collect data for milliseconds equal to sampleWindow
+  while (millis() < endWindow) {
+      signalSample = analogRead(SOUND);
+      if (signalSample > signalMax) {
+          signalMax = signalSample;  // save just the max levels
+      }
+      else if (signalSample < signalMin) {
+          signalMin = signalSample;  // save just the min levels
+      }
   }
+  return signalMax - signalMin;
+}
 
 void readMPU9150()
 {
@@ -324,39 +310,6 @@ void readMPU9150()
     gx = mpu9150.readSensor(mpu9150._addr_motion, MPU9150_GYRO_XOUT_L, MPU9150_GYRO_XOUT_H);
     gy = mpu9150.readSensor(mpu9150._addr_motion, MPU9150_GYRO_YOUT_L, MPU9150_GYRO_YOUT_H);
     gz = mpu9150.readSensor(mpu9150._addr_motion, MPU9150_GYRO_ZOUT_L, MPU9150_GYRO_ZOUT_H);
-}
-
-
-//// returns air temperature and humidity
-int readWeatherSi7020()
-{
-    Si70xx si7020;
-    Si7020OK = si7020.begin(); //// initialises Si7020
-
-    if (Si7020OK)
-    {
-        Si7020Temperature = si7020.readTemperature();
-        Si7020Humidity = si7020.readHumidity();
-    }
-
-    return Si7020OK ? 2 : 0;
-}
-
-
-//// returns measurements of UV, InfraRed and Ambient light
-int readWeatherSi1132()
-{
-    Si1132 si1132;
-    Si1132OK = si1132.begin(); //// initialises Si1132
-
-    if (Si1132OK)
-    {
-        Si1132UVIndex = si1132.readUV() / 100;
-        Si1132Visible = si1132.readVisible();  ////0 to 1000 Lux
-        Si1132InfraRd = si1132.readIR();
-    }
-
-    return Si1132OK ? 3 : 0;
 }
 
 //// returns accelaration along x-axis, should be 0-1g
@@ -410,35 +363,4 @@ float getYTilt(float accelY, float accelZ)
    }
 
    return tilt;
-}
-
-//returns sound level measurement in as voltage values (0 to 3.3v)
-float readSoundLevel()
-{
-    unsigned int sampleWindow = 50; // Sample window width in milliseconds (50 milliseconds = 20Hz)
-    unsigned long endWindow = millis() + sampleWindow;  // End of sample window
-
-    unsigned int signalSample = 0;
-    unsigned int signalMin = 4095; // Minimum is the lowest signal below which we assume silence
-    unsigned int signalMax = 0; // Maximum signal starts out the same as the Minimum signal
-
-    // collect data for milliseconds equal to sampleWindow
-    while (millis() < endWindow)
-    {
-        signalSample = analogRead(SOUND);
-        if (signalSample > signalMax)
-        {
-            signalMax = signalSample;  // save just the max levels
-        }
-        else if (signalSample < signalMin)
-        {
-            signalMin = signalSample;  // save just the min levels
-        }
-    }
-
-    //SOUNDV = signalMax - signalMin;  // max - min = peak-peak amplitude
-    SOUNDV = mapFloat((signalMax - signalMin), 0, 4095, 0, 3.3);
-
-    //return 1;
-    return SOUNDV;
 }
