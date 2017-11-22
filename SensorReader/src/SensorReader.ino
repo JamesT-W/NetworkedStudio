@@ -11,7 +11,9 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
+
 int Hour = 0; //Current hour (0-23)
+
 const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
@@ -249,11 +251,11 @@ void loop(void)
     sendServer("Sound");                //tell the server sound was detected
     calibration = true;
     delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
+
   }
 
   /* Take averages of environment variables and send to server every hour
   */
-
   int newHour = Time.hour();
   if (newHour != Hour)
   {
@@ -274,9 +276,10 @@ void loop(void)
    }
    averageLight = averageLight / 10;
    averageTemp = averageTemp / 10;
-   averageHumidity = averageHumidity / 10;
+   averageHumidity = averageHumidity / 10
 
-
+  /* Take averages of environment variables and send to server every hour
+  */
   String blank = ""; //temporary
   //Get and publish Humidity
   String humidString = blank+"Humidity: "+averageHumidity;
@@ -333,7 +336,6 @@ void sendEnv()
      "\"2\": \"" + String(Si7020Humidity) + "\"," +
      "\"3\": \"" + String(Si1132Visible) + "\"," +
      "\"k\": \"" + key + "\"," + "\"datatype\": \"" + "THL" + "\" }");
-
 }
 
 
