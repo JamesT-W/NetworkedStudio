@@ -328,21 +328,24 @@ void sendServer(String str)
 
 void sendEnv()
 {
-  String send = "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
-     "\"2\": \"" + String(Si7020Humidity) + "\"," +
-     "\"3\": \"" + String(Si1132Visible) + "\"," +
-     "\"k\": \"" + key + "\"," + "\"datatype\": \"" + "THL" + "\" }";
+  String send = String(Si7020Temperature) + "," +
+     + String(Si7020Humidity) + "," +
+      + String(Si1132Visible) + "," +
+      + key + "," + Time.year() + "-"  + Time.month() + "-" + Time.day() + "-"
+      + Time.hour() + "-" + Time.minute() + "-" + Time.second();
 
   Serial.println("about to send env post req"); //debug
 
-  client.println("POST /webapp/api HTTP/1.1");
+  client.println("POST /webapp/sendweather HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
   client.print("Content-Length: ");
   client.println(send.length());
-  client.println("Content-Type: application/json");
+  client.println("Content-Type: text/plain");
   client.println();
   //send JSON:
+  Particle.publish("POST weather",send);
   client.print(send);
+
 }
 
 
