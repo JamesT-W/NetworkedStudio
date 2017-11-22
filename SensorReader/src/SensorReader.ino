@@ -88,7 +88,7 @@ TCPClient client;  //used to connect to the server
 const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
 const int serverPort = 80;  //port
 
-LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_BLINK, LED_SPEED_SLOW);
+LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
 
 //// ***************************************************************************
 
@@ -145,17 +145,18 @@ void setup()
     Hour = Time.hour() - 1;  //Returns hour as an int (0-23). Used to only take environment readings every hour.
     Serial.println(String(Hour));
 
+    blinkYellow.setActive(true);
     connectVM();
 
 }
 //attempt to connect to VMserver, blink red if unable to
 void connectVM(){
-  if(client.connect(serverURL, serverPort) != true)
+  interrupts();
+  if(client.connect(serverURL, serverPort))
   {
-    blinkYellow.setActive(true);
-    delay(3000);
     blinkYellow.setActive(false);
   }
+  noInterrupts();
 }
 
 void initialiseMPU9150()
@@ -207,6 +208,7 @@ void loop(void)
 
   if(client.connected() != true)
   {
+    blinkYellow.setActive(true);
     Serial.println("Connection to server lost");
     connectVM();
   }
