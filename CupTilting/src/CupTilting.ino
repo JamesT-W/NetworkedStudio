@@ -276,10 +276,12 @@ void loop(void)
         percentFull = 100;
         Particle.publish("Refilled!", percentFull, PRIVATE);
         XTiltValue = 100; //breaks out of the while loop
+        sendServer("100");
       }
       else {
         percentFull = XTiltValue; //XTiltValue == 0 here
         Particle.publish("Empty - Refill Needed", percentFull, PRIVATE);
+        sendServer(percentFull);
         delay(1000);
       }
     }
@@ -301,11 +303,11 @@ void loop(void)
 //Tell the server when and where motion/sound was detected
 void sendServer(String str)
 {
-  String send = str.concat("%");
+  String send = str + String('%');
 
   //post string data into the server directly
 
-  Serial.println("about to send cup fill percent"); //debug
+  Serial.println("about to send cup fill percent " +send); //debug
 
   client.println("POST /webapp/sendper HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
