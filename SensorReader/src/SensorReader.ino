@@ -212,6 +212,7 @@ void loop(void)
     Serial.println("Connection to server lost");
     connectVM();
   }
+  Serial.println("faggot");
 
   //Calibrate sound, measure ambient noise levels
   if(calibration)
@@ -301,7 +302,7 @@ void loop(void)
   String lightString = blank+"Lightlevel: " +averageLight;
   Particle.publish("Ldata:", lightString, PRIVATE);
 
-  sendEnv(); //send environment readings to server
+  sendEnv(averageTemp, averageHumidity, averageLight); //send environment readings to server
 
   }
 
@@ -326,11 +327,11 @@ void sendServer(String str)
   client.println(send);
 }
 
-void sendEnv()
+void sendEnv(float avTemp, float avHumid, float avLight)
 {
-  String send = String(Si7020Temperature) + "," +
-     + String(Si7020Humidity) + "," +
-      + String(Si1132Visible) + "," +
+  String send = String(avTemp) + "," +
+     + String(avHumid) + "," +
+      + String(avLight) + "," +
       + key + "," + Time.year() + "-"  + Time.month() + "-" + Time.day() + "-"
       + Time.hour() + "-" + Time.minute() + "-" + Time.second() + ","  + Time.now();
 
