@@ -3,7 +3,7 @@
 #include "Si70xx.h"
 #include "math.h"
 
-//https://thingspeak.com/channels/350722
+
 
 //// Initialize application variables
 #define RAD_TO_DEGREES 57.2957795131
@@ -11,7 +11,12 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-const String key = "S2D4YAIF6ACZHHMG"; //Thingspeak API Key
+//SERVER CONNECTION
+TCPClient client;  //used to connect to the server
+const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
+const int serverPort = 80;  //port
+
+LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
 
 int PUBLISH_DELAY = 400; //adds a delay to make publishing less frequent
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
@@ -133,6 +138,9 @@ void setup()
     // initialises MPU9150 inertial measure unit
     initialiseMPU9150();
 
+    blinkYellow.setActive(true);
+    connectVM();
+
 /*
     int counter = 50;
     for (int i=0; i<counter; i++) { //get's an average for the initial values
@@ -151,6 +159,16 @@ void setup()
     initialTiltX = 90;
     oldXTiltValue = 100;
 
+}
+
+//attempt to connect to VMserver, blink red if unable to
+void connectVM(){
+  interrupts();
+  if(client.connect(serverURL, serverPort))
+  {
+    blinkYellow.setActive(false);
+  }
+  noInterrupts();
 }
 
 void initialiseMPU9150()
@@ -199,6 +217,13 @@ void loop(void)
 
     delay(SENSORDELAY);     //// allows sensors time to warm up
     readMPU9150();          //// reads compass, accelerometer and gyroscope data
+    interrupts();
+    if(client.connected() != true)
+    {
+      blinkYellow.setActive(true);
+      Serial.println("Connection to server lost");
+      connectVM();
+    }
 
     //Calibrate sound, measure ambient noise levels
     if(calibration) {
@@ -263,12 +288,32 @@ void loop(void)
 
     percentFull = XTiltValue;
     Particle.publish("Percent Full", percentFull, PRIVATE);
+    sendServer(percentFull);
 
     delay(500);
 
     // Power Down Sensors
     //digitalWrite(I2CEN, LOW);
     //digitalWrite(ALGEN, LOW);
+}
+
+
+//Tell the server when and where motion/sound was detected
+void sendServer(String str)
+{
+  String send = str.concat("%");
+
+  //post string data into the server directly
+
+  Serial.println("about to send cup fill percent"); //debug
+
+  client.println("POST /webapp/sendper HTTP/1.1");
+  client.println("HOST: sccug-330-03.lancs.ac.uk");
+  client.print("Content-Length: ");
+  client.println(send.length());
+  client.println("Content-Type: text/plain");
+  client.println();
+  client.println(send);
 }
 
 /*read sound, return max-min
