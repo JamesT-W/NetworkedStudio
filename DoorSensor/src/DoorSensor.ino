@@ -91,6 +91,13 @@ String DOORINFTIME = "";
 String DOORCOMTIME = "";
 bool lock = false;
 
+bool detectedInf = false;
+bool detectedCom = false;
+int detectedInfCounter = 0;
+int detectedComCounter = 0;
+
+int winner = 0;
+
 int mag[3]; //*******
 
 Si1132 si1132 = Si1132();
@@ -231,19 +238,25 @@ void loop(void)
 
     //determines if the door has been moved
     if(compassX > originalX + 1.5 || compassY > originalY + 1.5 || compassZ > originalZ + 2) {
-      //WiFi.on();
-      //while(WiFi.connecting()){} //delays until WiFi is connected before progressing further down the if loop
-      //delay(1000);
       digitalWrite(LED, HIGH);
-      Particle.publish("Compass", compassString, PRIVATE);
-      Particle.publish("OriginalCompass", originalCompassString, PRIVATE);
-      String DOORCOMTIME = String(Time.now());
+      //Particle.publish("Compass", compassString, PRIVATE);
+      //Particle.publish("OriginalCompass", originalCompassString, PRIVATE);
+      DOORCOMTIME = String(Time.now());
       DOORCOM(DOORCOMTIME);
       delay(1000);
     }
     digitalWrite(LED, LOW);
-    //delay(1000);
-    //WiFi.off();
+
+    if(detectedInfCounter >= 5) {
+      detectedInf = false;
+    }
+    if (detectedComCounter >= 5) {
+      detectedCom = false;
+    }
+    detectedInfCounter++;
+    detectedComCounter++;
+
+    delay(500);
 
     /*
     if(compassX > originalX + 1.25 || compassY > originalY + 1.25 || compassZ > originalZ + 1.25){
@@ -271,38 +284,74 @@ void loop(void)
 
 void DOORINF(const char *event, const char *data)
 {
+  //time no longer used
   DOORINFTIME = data;
-  Particle.publish("Infrared moved: ", DOORINFTIME, PRIVATE);
-  delay(5000);
-  myHandler(DOORINFTIME, DOORCOMTIME);
+  //Particle.publish("Infrared moved: ", DOORINFTIME, PRIVATE);
+
+  if (detectedInf == false) {
+    detectedInf = true;
+
+    if (detectedCom == true) {
+      winner = 1;
+      myHandler(winner);
+    }
+  }
+
+  if (detectedInf == true) {
+    Serial.println("INF - inf true");
+  }
+  if (detectedCom == true) {
+    Serial.println("INF - com true");
+  }
+
+  detectedInfCounter = 0;
+  winner = 0;
 }
 
 void DOORCOM(String DOORCOMTIME)
 {
-  Particle.publish("Compass moved: ", DOORCOMTIME, PRIVATE);
-  delay(5000);
-  myHandler(DOORINFTIME, DOORCOMTIME);
+  //time no longer used
+  //Particle.publish("Compass moved: ", DOORCOMTIME, PRIVATE);
+
+  if (detectedCom == false) {
+    detectedCom = true;
+
+    if (detectedInf == true) {
+      winner = 2;
+      myHandler(winner);
+    }
+  }
+
+  if (detectedInf == true) {
+    Serial.println("COM - inf true");
+  }
+  if (detectedCom == true) {
+    Serial.println("COM - com true");
+  }
+
+  detectedComCounter = 0;
+  winner = 0;
 }
 
-void myHandler(String DOORINFTIME, String DOORCOMTIME)
+void myHandler(int winner)
 {
   /* Particle.subscribe handlers are void functions, which means they don't return anything.
   They take two variables-- the name of your event, and any data that goes along with your event.
   */
-  if (strcmp(DOORINFTIME,DOORCOMTIME) < 0 && strcmp(DOORINFTIME,DOORCOMTIME) > 10) {
-    Particle.publish("LEAVING", strcmp(DOORINFTIME,DOORCOMTIME));
-    Serial.println("LEAVING!");
-    Particle.publish("Leaving detected", DOORCOMTIME, PRIVATE);
-  }
-  else if (strcmp(DOORINFTIME,DOORCOMTIME) > 0 && strcmp(DOORINFTIME,DOORCOMTIME) < -10) {
-    Particle.publish("ENTERING", strcmp(DOORINFTIME,DOORCOMTIME));
+  Serial.println("in loop");
+
+  if (winner == 1) {
     Serial.println("ENTERING!");
     Particle.publish("Entering detected", DOORINFTIME, PRIVATE);
   }
-  else {
-    Serial.println("One sensor detected motion, but the other didn't. Avoiding anomaly.");
+  else if (winner == 2) {
+    Serial.println("LEAVING!");
+    Particle.publish("Leaving detected", DOORCOMTIME, PRIVATE);
   }
-  Particle.publish("--------------------");
+  else {
+    Serial.print("Winner is not 1 or 2");
+  }
+  Serial.println("--------------------");
 }
 
 void readMPU9150()
