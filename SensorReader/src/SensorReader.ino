@@ -12,7 +12,9 @@
 #define ACCEL_SCALE 2 // +/- 2g
 
 
-const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
+int Hour = 0; //Current hour (0-23)
+
+const String key = "2"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -82,6 +84,12 @@ bool ACCELOK = false;
 int cx, cy, cz, ax, ay, az, gx, gy, gz;
 double tm; //// Celsius
 
+TCPClient client;  //used to connect to the server
+const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
+const int serverPort = 80;  //port
+
+LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
+
 //// ***************************************************************************
 
 //// SYSTEM_MODE(SEMI_AUTOMATIC);
@@ -120,7 +128,7 @@ void setup()
     Wire.begin();  // Start up I2C, required for LSM303 communication
 
     // diables interrupts
-    noInterrupts();
+    noInterrupts();                                                            // DO WE NEED INTERRUPTS????
 
     // initialises the IO pins
     setPinsMode();
@@ -134,6 +142,21 @@ void setup()
     pinMode(inputPin, INPUT);     // Sets inputPin as an INPUT
     digitalWrite(LED, LOW);       // Turns LED OFF, i.e. start by assuming no motion
 
+    Hour = Time.hour() - 1;  //Returns hour as an int (0-23). Used to only take environment readings every hour.
+    Serial.println(String(Hour));
+
+    blinkYellow.setActive(true);
+    connectVM();
+
+}
+//attempt to connect to VMserver, blink red if unable to
+void connectVM(){
+  interrupts();
+  if(client.connect(serverURL, serverPort))
+  {
+    blinkYellow.setActive(false);
+  }
+  noInterrupts();
 }
 
 void initialiseMPU9150()
@@ -181,13 +204,22 @@ void loop(void)
   digitalWrite(ALGEN, HIGH);
   delay(500);
 
+  interrupts();
+
+  if(client.connected() != true)
+  {
+    blinkYellow.setActive(true);
+    Serial.println("Connection to server lost");
+    connectVM();
+  }
+  Serial.println("faggot");
+
   //Calibrate sound, measure ambient noise levels
   if(calibration)
   {
     soundState = measure();
     Serial.println("Calibrated!");
     calibration = false;
-
   }
 
   msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
@@ -199,7 +231,12 @@ void loop(void)
      {
        Serial.println("Motion has been detected!");    // If yes,  prints new state and
        msensorState = HIGH;                            // preserves current sensor state
-       Particle.publish("IFTT", "MOTION DETECTED", PUBLIC); //Used for IFTT notifications
+
+       //This is the part that integrates with DoorSensor
+       String timestr = String(Time.now());
+       Serial.println(timestr);
+       Particle.publish("DOORINF", timestr, PUBLIC); //Used for door open checks
+
        sendServer("Motion");          //tell the server motion was detected
      }
   }
@@ -222,12 +259,19 @@ void loop(void)
     sendServer("Sound");                //tell the server sound was detected
     calibration = true;
     delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
+
   }
-  
+
   /* Take averages of environment variables and send to server every hour
   */
-  
-  float averageHumidity, averageLight, averageTemp;
+  int newHour = Time.hour();
+  if (newHour != Hour)
+  {
+    Serial.println(String(newHour));
+    Hour = Time.hour();
+    Serial.println("New hour. Printing environment variables.");
+
+    float averageHumidity, averageLight, averageTemp;
     averageTemp = averageLight = averageHumidity = 0;
 
     for(int i = 0; i < 10; i++) {
@@ -238,43 +282,73 @@ void loop(void)
       averageHumidity = averageHumidity + Si7020Humidity;
       delay(1000);
    }
+
    averageLight = averageLight / 10;
    averageTemp = averageTemp / 10;
    averageHumidity = averageHumidity / 10;
 
+  /* Take averages of environment variables and send to server every hour
+  */
+  String blank = ""; //temporary
+  //Get and publish Humidity
+  String humidString = blank+"Humidity: "+averageHumidity;
+  Particle.publish("Hdata:", humidString, PRIVATE);
 
-    String blank = ""; //temporary
-    //Get and publish Humidity
-    String humidString = blank+"Humidity: "+averageHumidity;
-    Particle.publish("Hdata:", humidString, PRIVATE);
+  //Get and publish temperature
+  String tempString = blank+"Temperature: "+averageTemp;
+  Particle.publish("Tdata:", tempString, PRIVATE);
 
-    //Get and publish temperature
-    String tempString = blank+"Temperature: "+averageTemp;
-    Particle.publish("Tdata:", tempString, PRIVATE);
+  //Get and publish light
+  String lightString = blank+"Lightlevel: " +averageLight;
+  Particle.publish("Ldata:", lightString, PRIVATE);
 
-    //Get and publish light
-    String lightString = blank+"Lightlevel: " +averageLight;
-    Particle.publish("Ldata:", lightString, PRIVATE);
+  sendEnv(averageTemp, averageHumidity, averageLight); //send environment readings to server
 
-    /*
-    Publish to server and populate fields 1,2,3 accordingly
-    */
+  }
 
-    Particle.publish("CustomServer", "{ \"1\": \"" + String(Si7020Temperature) + "\"," +
-       "\"2\": \"" + String(Si7020Humidity) + "\"," +
-       "\"3\": \"" + String(Si1132Visible) + "\"," +
-       "\"k\": \"" + key + "\" }", PRIVATE);
 }
 
 
 //Tell the server when and where motion/sound was detected
 void sendServer(String str)
 {
-  String send = str +" detected in zone " +key +". Device ID: " +System.deviceID();
-  String dataType = "Motion";
-  Particle.publish("Motion", "{ \"4\": \"" + send + "\"," +
-  "\"k\": \"" + key  + "\"," + "\"datatype\": \"" + dataType + "\" }", PRIVATE);
+  String send = str +" detected in zone " +key +". Device ID: " +System.deviceID() + " in: " + Time.timeStr();
+
+  //post string data into the server directly
+
+  Serial.println("about to send post request"); //debug
+
+  client.println("POST /webapp/sendactivity HTTP/1.1");
+  client.println("HOST: sccug-330-03.lancs.ac.uk");
+  client.print("Content-Length: ");
+  client.println(send.length());
+  client.println("Content-Type: text/plain");
+  client.println();
+  client.println(send);
 }
+
+void sendEnv(float avTemp, float avHumid, float avLight)
+{
+  String send = String(avTemp) + "," +
+     + String(avHumid) + "," +
+      + String(avLight) + "," +
+      + key + "," + Time.year() + "-"  + Time.month() + "-" + Time.day() + "-"
+      + Time.hour() + "-" + Time.minute() + "-" + Time.second() + ","  + Time.now();
+
+  Serial.println("about to send env post req"); //debug
+
+  client.println("POST /webapp/sendweather HTTP/1.1");
+  client.println("HOST: sccug-330-03.lancs.ac.uk");
+  client.print("Content-Length: ");
+  client.println(send.length());
+  client.println("Content-Type: text/plain");
+  client.println();
+  //send JSON:
+  Particle.publish("POST weather",send);
+  client.print(send);
+
+}
+
 
 /*read sound, return max-min
 */
