@@ -212,7 +212,6 @@ void loop(void)
     Serial.println("Connection to server lost");
     connectVM();
   }
-  Serial.println("faggot");
 
   //Calibrate sound, measure ambient noise levels
   if(calibration)
@@ -222,6 +221,7 @@ void loop(void)
     calibration = false;
   }
 
+/*
   msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
   if (msensorValue == HIGH)              // If the input pin is HIGH turn LED ON
   {
@@ -249,6 +249,7 @@ void loop(void)
       msensorState = LOW;                    // preserves current sensor state
     }
   }
+  */
 
 
   //measure sound, check if its more than ambient sound level (within threshold)
