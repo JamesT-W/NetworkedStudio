@@ -79,10 +79,6 @@ int east = 0;
 int northEast = 0;
 int southEast = 0;
 
-double zone1Average = 0;
-double zone2Average = 0;
-double zone3Average = 0;
-
 bool switchLED = false;
 
 int lastZone = 0;
@@ -192,26 +188,75 @@ void initialiseMPU9150()
 
 void loop(void)
 {
+  west = 0; northWest = 0;  southWest = 0;
+  east = 0; northEast = 0;  southEast = 0;
+
   int signalStrength = WiFi.RSSI();
   String blank = ""; //temporary
   Serial.println(signalStrength);
   Serial.println(dataBorder1);
   Serial.println(dataBorder2);
   Serial.println("--------");
+
+  WiFiAccessPoint aps[20];
+  int found = WiFi.scan(aps, 20);
+
+  for(int i=0; i<found; i++) {
+    //defines rssi value for each device
+    // WEST SIDE
+    if(newString == "Photon-RM2T" ) {
+      Serial.println("- NORTH WEST");
+      northWest += ap.rssi;
+    }
+    else if(newString == "Photon-HGBX") {
+      Serial.println("- WEST");
+      west += ap.rssi;
+    }
+    else if(newString =="Photon-WV3F") {
+      Serial.println("- SOUTH WEST");
+      southWest += ap.rssi;
+    }
+    // EAST SIDE
+    else if(newString =="Photon-DV78") {
+      Serial.println("- NORTH EAST");
+      northEast += ap.rssi;
+    }
+    else if(newString =="Photon-ARDE") {
+      Serial.println("- EAST");
+      east += ap.rssi;
+    }
+    else if(newString =="Photon-5D78") {
+      Serial.println("- SOUTH EAST");
+      southEast += ap.rssi;
+    }
+    delay(100);
+  }
+
   if(signalStrength < dataBorder1 && signalStrength < dataBorder2){
     Particle.publish("Zoning", "Zone 3", PRIVATE);
+    if(northWest <= northEast)
+      sendServer("zone1A");
+    else
+      sendServer("zone1B");
   }
   else if(signalStrength < dataBorder1 && signalStrength > dataBorder2) {
     Particle.publish("Zoning", "Zone 2", PRIVATE);
+    if(west <= east)
+      sendServer("zone2A");
+    else
+      sendServer("zone2B");
   }
   else if (signalStrength > dataBorder1 && signalStrength > dataBorder2){
     Particle.publish("Zoning", "Zone 1", PRIVATE);
-  } else {
+    if(southWest <= southEast)
+      sendServer("zone3A");
+    else
+      sendServer("zone3B");
+  }
+  else {
     Particle.publish("Zoning", "Border or Error", PRIVATE);
   }
   delay(1000);
-
-
 }
 
 void readMPU9150()
