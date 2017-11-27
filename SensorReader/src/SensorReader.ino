@@ -221,7 +221,7 @@ void loop(void)
     calibration = false;
   }
 
-/*
+/* MOTION DETECTION ONLY WORKS CORRECTLY IF A PIR MOTION SENSOR IS ATTACHED
   msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
   if (msensorValue == HIGH)              // If the input pin is HIGH turn LED ON
   {
@@ -265,47 +265,42 @@ void loop(void)
 
   /* Take averages of environment variables and send to server every hour
   */
-  int newHour = Time.hour();
-  if (newHour != Hour)
-  {
-    Serial.println(String(newHour));
-    Hour = Time.hour();
-    Serial.println("New hour. Printing environment variables.");
 
-    float averageHumidity, averageLight, averageTemp;
-    averageTemp = averageLight = averageHumidity = 0;
+  Serial.println("Printing environment variables.");
 
-    for(int i = 0; i < 10; i++) {
-      readWeatherSi1132();
-      readWeatherSi7020();
-      averageLight = averageLight + Si1132Visible;
-      averageTemp = averageTemp + Si7020Temperature;
-      averageHumidity = averageHumidity + Si7020Humidity;
-      delay(1000);
-   }
+  float averageHumidity, averageLight, averageTemp;
+  averageTemp = averageLight = averageHumidity = 0;
 
-   averageLight = averageLight / 10;
-   averageTemp = averageTemp / 10;
-   averageHumidity = averageHumidity / 10;
+  for(int i = 0; i < 10; i++) {
+    readWeatherSi1132();
+    readWeatherSi7020();
+    averageLight = averageLight + Si1132Visible;
+    averageTemp = averageTemp + Si7020Temperature;
+    averageHumidity = averageHumidity + Si7020Humidity;
+    delay(1000);
+ }
 
-  /* Take averages of environment variables and send to server every hour
-  */
-  String blank = ""; //temporary
-  //Get and publish Humidity
-  String humidString = blank+"Humidity: "+averageHumidity;
-  Particle.publish("Hdata:", humidString, PRIVATE);
 
-  //Get and publish temperature
-  String tempString = blank+"Temperature: "+averageTemp;
-  Particle.publish("Tdata:", tempString, PRIVATE);
+ averageLight = averageLight / 10;
+ averageTemp = averageTemp / 10;
+ averageHumidity = averageHumidity / 10;
 
-  //Get and publish light
-  String lightString = blank+"Lightlevel: " +averageLight;
-  Particle.publish("Ldata:", lightString, PRIVATE);
+ /* Take averages of environment variables and send to server every hour
+ */
+ String blank = ""; //temporary
+ //Get and publish Humidity
+ String humidString = blank+"Humidity: "+averageHumidity;
+ Particle.publish("Hdata:", humidString, PRIVATE);
 
-  sendEnv(averageTemp, averageHumidity, averageLight); //send environment readings to server
+ //Get and publish temperature
+ String tempString = blank+"Temperature: "+averageTemp;
+ Particle.publish("Tdata:", tempString, PRIVATE);
 
-  }
+ //Get and publish light
+ String lightString = blank+"Lightlevel: " +averageLight;
+ Particle.publish("Ldata:", lightString, PRIVATE);
+
+ sendEnv(averageTemp, averageHumidity, averageLight); //send environment readings to server
 
 }
 
