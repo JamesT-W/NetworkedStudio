@@ -14,7 +14,7 @@
 
 int Hour = 0; //Current hour (0-23)
 
-const String key = "2"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
+const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
