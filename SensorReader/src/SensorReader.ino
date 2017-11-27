@@ -263,44 +263,15 @@ void loop(void)
 
   }
 
-  /* Take averages of environment variables and send to server every hour
+  /*constantly print environment variables
   */
 
-  Serial.println("Printing environment variables.");
+ Serial.println("Printing environment variables.");
 
-  float averageHumidity, averageLight, averageTemp;
-  averageTemp = averageLight = averageHumidity = 0;
+ readWeatherSi1132();
+ readWeatherSi7020();
 
-  for(int i = 0; i < 10; i++) {
-    readWeatherSi1132();
-    readWeatherSi7020();
-    averageLight = averageLight + Si1132Visible;
-    averageTemp = averageTemp + Si7020Temperature;
-    averageHumidity = averageHumidity + Si7020Humidity;
-    delay(1000);
- }
-
-
- averageLight = averageLight / 10;
- averageTemp = averageTemp / 10;
- averageHumidity = averageHumidity / 10;
-
- /* Take averages of environment variables and send to server every hour
- */
- String blank = ""; //temporary
- //Get and publish Humidity
- String humidString = blank+"Humidity: "+averageHumidity;
- Particle.publish("Hdata:", humidString, PRIVATE);
-
- //Get and publish temperature
- String tempString = blank+"Temperature: "+averageTemp;
- Particle.publish("Tdata:", tempString, PRIVATE);
-
- //Get and publish light
- String lightString = blank+"Lightlevel: " +averageLight;
- Particle.publish("Ldata:", lightString, PRIVATE);
-
- sendEnv(averageTemp, averageHumidity, averageLight); //send environment readings to server
+ sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
 
 }
 
