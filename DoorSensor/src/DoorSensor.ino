@@ -241,7 +241,7 @@ void loop(void)
     originalCompassString = originalCompassString+"X: "+originalX+" Y: "+originalY+" Z: "+originalZ;
 
     //determines if the door has been moved
-    if(compassX > originalX + 1.5 || compassY > originalY + 1.5 || compassZ > originalZ + 2) {
+    if(compassX > originalX + 1.3 || compassY > originalY + 1.3 || compassZ > originalZ + 1.8) {
       digitalWrite(LED, HIGH);
       //Particle.publish("Compass", compassString, PRIVATE);
       //Particle.publish("OriginalCompass", originalCompassString, PRIVATE);
