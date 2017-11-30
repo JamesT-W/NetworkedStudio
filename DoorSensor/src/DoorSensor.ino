@@ -105,6 +105,10 @@ Si1132 si1132 = Si1132();
 // I2C address 0x69 could be 0x68 depends on your wiring.
 int MPU9150_I2C_ADDRESS = 0x68;
 
+TCPClient client;  //used to connect to the server
+const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
+const int serverPort = 80;  //port
+
 //// ***************************************************************************
 //// ***************************************************************************
 
@@ -341,10 +345,12 @@ void myHandler(int winner)
   Serial.println("in loop");
 
   if (winner == 1) {
+    sendDoor(winner);
     Serial.println("ENTERING!");
     Particle.publish("Entering detected", DOORINFTIME, PRIVATE);
   }
   else if (winner == 2) {
+    sendDoor(winner);
     Serial.println("LEAVING!");
     Particle.publish("Leaving detected", DOORCOMTIME, PRIVATE);
   }
@@ -352,6 +358,24 @@ void myHandler(int winner)
     Serial.print("Winner is not 1 or 2");
   }
   Serial.println("--------------------");
+}
+
+void sendDoor(int winner)
+{
+  String send = String(winner) + "," + Time.timeStr();
+
+  Serial.println("about to send env post req"); //debug
+
+  client.println("POST /webapp/senddoor HTTP/1.1");
+  client.println("HOST: sccug-330-03.lancs.ac.uk");
+  client.print("Content-Length: ");
+  client.println(send.length());
+  client.println("Content-Type: text/plain");
+  client.println();
+  //send JSON:
+  Particle.publish("POST door", send);
+  client.print(send);
+
 }
 
 void readMPU9150()
