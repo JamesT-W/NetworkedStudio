@@ -96,7 +96,7 @@ bool detectedCom = false;
 int detectedInfCounter = 0;
 int detectedComCounter = 0;
 
-int winner = 0;
+String winner = "";
 
 int mag[3]; //*******
 
@@ -105,9 +105,18 @@ Si1132 si1132 = Si1132();
 // I2C address 0x69 could be 0x68 depends on your wiring.
 int MPU9150_I2C_ADDRESS = 0x68;
 
+bool recentlyDetected = false;
+int recentlyDetectedCounter = 0;
+
 TCPClient client;  //used to connect to the server
 const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
 const int serverPort = 80;  //port
+
+TCPClient kettleTCP;  //used to connect to the server
+const char kettleIP[] = "192.168.0.104"; //ip address
+const int kettlePort = 2000;  //port
+
+LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
 
 //// ***************************************************************************
 //// ***************************************************************************
@@ -165,8 +174,22 @@ void setup()
     originalY = getCompassY(cy);
     originalZ = getCompassZ(cz);
 
+    //blinkYellow.setActive(true);
+
     Particle.subscribe("DOORINF", DOORINF);
+
+    //connectVM();
 }
+
+//attempt to connect to VMserver, blink red if unable to
+/*void connectVM(){
+  interrupts();
+  if(client.connect(serverURL, serverPort))
+  {
+    blinkYellow.setActive(false);
+  }
+  noInterrupts();
+}*/
 
 void initialiseMPU9150()
 {
@@ -221,69 +244,65 @@ void loop(void)
     Serial.print("WiFi IP: "); Serial.println(WiFi.localIP());
     */
 
-    //// powers up sensors
-    digitalWrite(I2CEN, HIGH);
-    digitalWrite(ALGEN, HIGH);
+    if (recentlyDetected == false) {
+      //// powers up sensors
+      digitalWrite(I2CEN, HIGH);
+      digitalWrite(ALGEN, HIGH);
 
-    //// allows sensors time to warm up
-    delay(SENSORDELAY);
+      //// allows sensors time to warm up
+      delay(SENSORDELAY);
 
-    readMPU9150();          // reads compass, accelerometer and gyroscope
+      /*if(client.connected() != true)
+      {
+        blinkYellow.setActive(true);
+        Serial.println("Connection to server lost");
+        connectVM();
+      }*/
 
-    compassX = getCompassX(cx);
-    compassY = getCompassY(cy);
-    compassZ = getCompassZ(cz);
+      readMPU9150();          // reads compass, accelerometer and gyroscope
 
-    String compassString = "";
-    compassString = compassString+"X: "+compassX+" Y: "+compassY+" Z: "+compassZ;
+      compassX = getCompassX(cx);
+      compassY = getCompassY(cy);
+      compassZ = getCompassZ(cz);
 
-    String originalCompassString = "";
-    originalCompassString = originalCompassString+"X: "+originalX+" Y: "+originalY+" Z: "+originalZ;
+      String compassString = "";
+      compassString = compassString+"X: "+compassX+" Y: "+compassY+" Z: "+compassZ;
 
-    //determines if the door has been moved
-    if(compassX > originalX + 1.3 || compassY > originalY + 1.3 || compassZ > originalZ + 1.8) {
-      digitalWrite(LED, HIGH);
-      //Particle.publish("Compass", compassString, PRIVATE);
-      //Particle.publish("OriginalCompass", originalCompassString, PRIVATE);
-      DOORCOMTIME = String(Time.now());
-      DOORCOM(DOORCOMTIME);
-      delay(1000);
-    }
-    digitalWrite(LED, LOW);
+      String originalCompassString = "";
+      originalCompassString = originalCompassString+"X: "+originalX+" Y: "+originalY+" Z: "+originalZ;
 
-    if(detectedInfCounter >= 5) {
-      detectedInf = false;
-    }
-    if (detectedComCounter >= 5) {
-      detectedCom = false;
-    }
-    detectedInfCounter++;
-    detectedComCounter++;
-
-    delay(500);
-
-    /*
-    if(compassX > originalX + 1.25 || compassY > originalY + 1.25 || compassZ > originalZ + 1.25){
-      WiFi.connect();
-      while(WiFi.connecting()){ //delays until WiFi is connected before progressing further down the if loop
+      //determines if the door has been moved
+      if(compassX > originalX + 1.5 || compassY > originalY + 1.5 || compassZ > originalZ + 2.0) {
+        digitalWrite(LED, HIGH);
+        //Particle.publish("Compass", compassString, PRIVATE);
+        //Particle.publish("OriginalCompass", originalCompassString, PRIVATE);
+        DOORCOMTIME = String(Time.now());
+        DOORCOM(DOORCOMTIME);
         delay(1000);
       }
-      delay(1000);
-      Particle.publish("Compass", compassString, PRIVATE);
+      digitalWrite(LED, LOW);
+
+      if(detectedInfCounter >= 5) {
+        detectedInf = false;
+      }
+      if (detectedComCounter >= 5) {
+        detectedCom = false;
+      }
+      detectedInfCounter++;
+      detectedComCounter++;
+
+      delay(500);
+    }
+    else {
+      if (recentlyDetectedCounter >= 5) {
+        recentlyDetected = false;
+        recentlyDetectedCounter = 0;
+      }
+      else {
+        recentlyDetectedCounter++;
+      }
       delay(1000);
     }
-    WiFi.disconnect();
-    */
-
-    /*Publish to Thingspeak and populate fields 1,2,3 accordingly
-    we specify event name thingSpeakWrite_All that is recognised by the webhook we integrated with our project
-    on the particle dashboard.*/
-
-    //delay(SLEEP_DELAY); //Stay awake for a while
-
-    // Power Down Sensors
-    //digitalWrite(I2CEN, LOW);
-    //digitalWrite(ALGEN, LOW);
 }
 
 void DOORINF(const char *event, const char *data)
@@ -296,7 +315,7 @@ void DOORINF(const char *event, const char *data)
     detectedInf = true;
 
     if (detectedCom == true) {
-      winner = 1;
+      winner = "ENTERING";
       myHandler(winner);
     }
   }
@@ -309,7 +328,7 @@ void DOORINF(const char *event, const char *data)
   }
 
   detectedInfCounter = 0;
-  winner = 0;
+  winner = "";
 }
 
 void DOORCOM(String DOORCOMTIME)
@@ -321,7 +340,7 @@ void DOORCOM(String DOORCOMTIME)
     detectedCom = true;
 
     if (detectedInf == true) {
-      winner = 2;
+      winner = "LEAVING";
       myHandler(winner);
     }
   }
@@ -334,37 +353,44 @@ void DOORCOM(String DOORCOMTIME)
   }
 
   detectedComCounter = 0;
-  winner = 0;
+  winner = "";
 }
 
-void myHandler(int winner)
+void myHandler(String winner)
 {
   /* Particle.subscribe handlers are void functions, which means they don't return anything.
   They take two variables-- the name of your event, and any data that goes along with your event.
   */
   Serial.println("in loop");
 
-  if (winner == 1) {
-    sendDoor(winner);
+  if (winner.equals("ENTERING")) {
+    sendServer(winner);
+    sendKettle(winner);
     Serial.println("ENTERING!");
     Particle.publish("Entering detected", DOORINFTIME, PRIVATE);
   }
-  else if (winner == 2) {
-    sendDoor(winner);
+  else if (winner.equals("LEAVING")) {
+    sendServer(winner);
+    sendKettle(winner);
     Serial.println("LEAVING!");
     Particle.publish("Leaving detected", DOORCOMTIME, PRIVATE);
   }
   else {
-    Serial.print("Winner is not 1 or 2");
+    Serial.print("Winner is not ENTERING or LEAVING");
   }
+
+  recentlyDetected = true;
   Serial.println("--------------------");
 }
 
-void sendDoor(int winner)
+//Tell the server when and where motion/sound was detected
+void sendServer(String winner)
 {
-  String send = String(winner) + "," + Time.timeStr();
+  String send = winner + "," + Time.timeStr();
 
-  Serial.println("about to send env post req"); //debug
+  //post string data into the server directly
+
+  Serial.println("about to send post request"); //debug
 
   client.println("POST /webapp/senddoor HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
@@ -372,10 +398,30 @@ void sendDoor(int winner)
   client.println(send.length());
   client.println("Content-Type: text/plain");
   client.println();
-  //send JSON:
-  Particle.publish("POST door", send);
-  client.print(send);
+  client.println(send);
+}
 
+void sendKettle(String winner)
+{
+  String kettleOn = "set sys output 0x4";
+  String kettleOff = "set sys output 0x0";
+
+  if (kettleTCP.connect(kettleIP, kettlePort)) {
+    if (winner.equals("ENTERING")) {
+      Particle.publish("Kettle on", kettleOn, PUBLIC);
+      kettleTCP.println(kettleOn);
+    }
+    else if (winner.equals("LEAVING")) {
+      Particle.publish("Kettle off", kettleOff, PUBLIC);
+      kettleTCP.println(kettleOff);
+    }
+    else {
+      Particle.publish("winner failed", "connectionFailed", PUBLIC);
+    }
+  }
+  else {
+    Particle.publish("connection failed", "connectionFailed", PUBLIC);
+  }
 }
 
 void readMPU9150()
