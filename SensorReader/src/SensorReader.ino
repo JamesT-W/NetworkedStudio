@@ -14,7 +14,7 @@
 
 int Hour = 0; //Current hour (0-23)
 
-const String key = "2"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
+const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -254,7 +254,7 @@ void loop(void)
 
   //measure sound, check if its more than ambient sound level (within threshold)
   soundValue = measure();
-  if(soundValue > soundState + 500)
+  if(soundValue > soundState + 100)
   {
     Serial.println("SOUND DETECTED!");
     sendServer("Sound");                //tell the server sound was detected
@@ -266,7 +266,7 @@ void loop(void)
   /*constantly print environment variables
   */
 
- Serial.println("Printing environment variables.");
+ //Serial.println("Printing environment variables.");
 
  readWeatherSi1132();
  readWeatherSi7020();
@@ -283,7 +283,7 @@ void sendServer(String str)
 
   //post string data into the server directly
 
-  Serial.println("about to send post request"); //debug
+  Serial.println(send); //debug
 
   client.println("POST /webapp/sendactivity HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
