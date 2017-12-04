@@ -258,7 +258,6 @@ void loop(void)
     sendServer("Sound");                //tell the server sound was detected
     calibration = true;
     delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
-
   }
 
 
@@ -268,6 +267,7 @@ void loop(void)
 
  sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
 
+ Serial.println(Si1132Visible);
 }
 
 
@@ -275,6 +275,7 @@ void loop(void)
 void sendServer(String str)
 {
   String send = str +" detected in zone " +key +". Device ID: " +System.deviceID() + " in: " + Time.timeStr();
+
 
   //post string data into the server directly
 
