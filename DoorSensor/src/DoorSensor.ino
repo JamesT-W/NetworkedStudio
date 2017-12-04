@@ -113,7 +113,7 @@ const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
 const int serverPort = 80;  //port
 
 TCPClient kettleTCP;  //used to connect to the server
-const char kettleIP[] = "192.168.0.104"; //ip address
+const char kettleIP[] = "192.168.0.101"; //ip address
 const int kettlePort = 2000;  //port
 
 LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
@@ -404,20 +404,20 @@ void sendServer(String winner)
 void sendKettle(String winner)
 {
   String kettleOn = "set sys output 0x4";
-  String kettleOff = "set sys output 0x0";
+  //String kettleOff = "set sys output 0x0";
 
   if (kettleTCP.connect(kettleIP, kettlePort)) {
     if (winner.equals("ENTERING")) {
       Particle.publish("Kettle on", kettleOn, PUBLIC);
       kettleTCP.println(kettleOn);
     }
-    else if (winner.equals("LEAVING")) {
+    /*else if (winner.equals("LEAVING")) {
       Particle.publish("Kettle off", kettleOff, PUBLIC);
       kettleTCP.println(kettleOff);
     }
     else {
       Particle.publish("winner failed", "connectionFailed", PUBLIC);
-    }
+    }*/
   }
   else {
     Particle.publish("connection failed", "connectionFailed", PUBLIC);
