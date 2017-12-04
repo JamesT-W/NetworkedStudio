@@ -1,7 +1,5 @@
-/****************************
- ****************************/
-#ifndef _Si1132_H_
-#define _Si1132_H_
+#ifndef __Si1132__
+#define __Si1132__
 
 #include "application.h"
 
@@ -83,15 +81,14 @@
 
 class Si1132 {
 	public :
-		Si1132();
+		Si1132(void);
 		boolean begin(void);
+		void reset(void);
+		uint16_t readTemperature(void);
 		uint16_t readUV(void);
-		uint8_t readUV0(void);
-		uint8_t readUV1(void);
 		float readVisible(void);
 		float readIR(void);
 	private :
-		void reset(void);
 		uint16_t read16(uint8_t addr);
 		uint8_t read8(uint8_t addr);
 		void write8(uint8_t reg, uint8_t val);

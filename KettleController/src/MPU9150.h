@@ -143,6 +143,7 @@
 #define MPU9150_CMPS_ZOUT_L        0x4E   // R
 #define MPU9150_CMPS_ZOUT_H        0x4F   // R
 
+
 class MPU9150 {
 	public :
 		MPU9150();
