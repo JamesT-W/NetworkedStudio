@@ -272,6 +272,7 @@ void loop(void)
  readWeatherSi7020();
 
  sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
+ Serial.println(Si1132Visible);
 
 }
 
@@ -302,7 +303,6 @@ void sendEnv(float avTemp, float avHumid, float avLight)
       + key + "," + Time.year() + "-"  + Time.month() + "-" + Time.day() + "-"
       + Time.hour() + "-" + Time.minute() + "-" + Time.second() + ","  + Time.now();
 
-  Serial.println("about to send env post req"); //debug
 
   client.println("POST /webapp/sendweather HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
