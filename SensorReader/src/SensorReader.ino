@@ -252,7 +252,7 @@ void loop(void)
 
   //measure sound, check if its more than ambient sound level (within threshold)
   soundValue = measure();
-  if(soundValue > soundState + 500)
+  if(soundValue > soundState + 50)
   {
     Serial.println("SOUND DETECTED!");
     sendServer("Sound");                //tell the server sound was detected
@@ -260,11 +260,6 @@ void loop(void)
     delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
 
   }
-
-  Serial.println("Printing environment variables.");
-
-  float averageHumidity, averageLight, averageTemp;
-  averageTemp = averageLight = averageHumidity = 0;
 
 
  readWeatherSi1132();
@@ -283,8 +278,6 @@ void sendServer(String str)
 
   //post string data into the server directly
 
-  Serial.println("about to send post request"); //debug
-
   client.println("POST /webapp/sendactivity HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
   client.print("Content-Length: ");
@@ -301,8 +294,6 @@ void sendEnv(float avTemp, float avHumid, float avLight)
       + String(avLight) + "," +
       + key + "," + Time.year() + "-"  + Time.month() + "-" + Time.day() + "-"
       + Time.hour() + "-" + Time.minute() + "-" + Time.second() + ","  + Time.now();
-
-  Serial.println("about to send env post req"); //debug
 
   client.println("POST /webapp/sendweather HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
