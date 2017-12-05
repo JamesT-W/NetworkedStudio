@@ -112,10 +112,6 @@ TCPClient client;  //used to connect to the server
 const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
 const int serverPort = 80;  //port
 
-TCPClient kettleTCP;  //used to connect to the server
-const char kettleIP[] = "192.168.0.101"; //ip address
-const int kettlePort = 2000;  //port
-
 LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
 
 //// ***************************************************************************
@@ -175,9 +171,7 @@ void setup()
     originalZ = getCompassZ(cz);
 
     //blinkYellow.setActive(true);
-
     Particle.subscribe("DOORINF", DOORINF);
-
     //connectVM();
 }
 
@@ -364,16 +358,12 @@ void myHandler(String winner)
   Serial.println("in loop");
 
   if (winner.equals("ENTERING")) {
-    sendServer(winner);
-    sendKettle(winner);
     Serial.println("ENTERING!");
-    Particle.publish("Entering detected", DOORINFTIME, PRIVATE);
+    Particle.publish("Entering detected", winner, PRIVATE);
   }
   else if (winner.equals("LEAVING")) {
-    sendServer(winner);
-    sendKettle(winner);
     Serial.println("LEAVING!");
-    Particle.publish("Leaving detected", DOORCOMTIME, PRIVATE);
+    Particle.publish("Leaving detected", winner, PRIVATE);
   }
   else {
     Serial.print("Winner is not ENTERING or LEAVING");
@@ -383,7 +373,6 @@ void myHandler(String winner)
   Serial.println("--------------------");
 }
 
-//Tell the server when and where motion/sound was detected
 void sendServer(String winner)
 {
   String send = winner + "," + Time.timeStr();
@@ -399,29 +388,6 @@ void sendServer(String winner)
   client.println("Content-Type: text/plain");
   client.println();
   client.println(send);
-}
-
-void sendKettle(String winner)
-{
-  String kettleOn = "set sys output 0x4";
-  //String kettleOff = "set sys output 0x0";
-
-  if (kettleTCP.connect(kettleIP, kettlePort)) {
-    if (winner.equals("ENTERING")) {
-      Particle.publish("Kettle on", kettleOn, PUBLIC);
-      kettleTCP.println(kettleOn);
-    }
-    /*else if (winner.equals("LEAVING")) {
-      Particle.publish("Kettle off", kettleOff, PUBLIC);
-      kettleTCP.println(kettleOff);
-    }
-    else {
-      Particle.publish("winner failed", "connectionFailed", PUBLIC);
-    }*/
-  }
-  else {
-    Particle.publish("connection failed", "connectionFailed", PUBLIC);
-  }
 }
 
 void readMPU9150()
