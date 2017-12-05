@@ -280,7 +280,7 @@ void loop(void)
       }
       else {
         percentFull = XTiltValue; //XTiltValue == 0 here
-        Particle.publish("Empty - Refill Needed", percentFull, PRIVATE);
+        Particle.publish("Empty", percentFull, PRIVATE);
         sendServer(percentFull);
         delay(1000);
       }
