@@ -202,6 +202,10 @@ void loop(void)
   int found = WiFi.scan(aps, 20);
 
   for(int i=0; i<found; i++) {
+    WiFiAccessPoint& ap = aps[i];
+    String currentSSID(ap.ssid);
+
+    String newString = ap.ssid;
     //defines rssi value for each device
     // WEST SIDE
     if(newString == "Photon-RM2T" ) {
@@ -229,34 +233,35 @@ void loop(void)
       Serial.println("- SOUTH EAST");
       southEast += ap.rssi;
     }
-    delay(100);
   }
 
   if(signalStrength < dataBorder1 && signalStrength < dataBorder2){
-    Particle.publish("Zoning", "Zone 3", PRIVATE);
     if(northWest <= northEast)
-      sendServer("zone1A");
+      Particle.publish("Zoning", "Zone 1A", PRIVATE);
+      //sendServer("zone1A");
     else
-      sendServer("zone1B");
+      Particle.publish("Zoning", "Zone 1B", PRIVATE);
+      //sendServer("zone1B");
   }
   else if(signalStrength < dataBorder1 && signalStrength > dataBorder2) {
-    Particle.publish("Zoning", "Zone 2", PRIVATE);
     if(west <= east)
-      sendServer("zone2A");
+      Particle.publish("Zoning", "Zone 2A", PRIVATE);
+      //sendServer("zone2A");
     else
-      sendServer("zone2B");
+      Particle.publish("Zoning", "Zone 2B", PRIVATE);
+      //sendServer("zone2B");
   }
   else if (signalStrength > dataBorder1 && signalStrength > dataBorder2){
-    Particle.publish("Zoning", "Zone 1", PRIVATE);
     if(southWest <= southEast)
-      sendServer("zone3A");
+      Particle.publish("Zoning", "Zone 3A", PRIVATE);
+      //sendServer("zone3A");
     else
-      sendServer("zone3B");
+      Particle.publish("Zoning", "Zone 3B", PRIVATE);
+      //sendServer("zone3B");
   }
   else {
     Particle.publish("Zoning", "Border or Error", PRIVATE);
   }
-  delay(1000);
 }
 
 void readMPU9150()
