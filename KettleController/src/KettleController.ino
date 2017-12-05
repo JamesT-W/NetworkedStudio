@@ -161,7 +161,8 @@ void setup()
     originalZ = getCompassZ(cz);
 
     //blinkYellow.setActive(true);
-
+	Particle.subscribe("Kettle On (Door)", sendKettleOnDoor);
+	Particle.subscribe("Kettle On (Cup)", sendKettleOnCup);
     //connectVM();
 }
 
@@ -249,16 +250,20 @@ void loop(void)
 
     //determines which temp value it should send depending on how much the photon has been tilted and in which direction
     if(compassX > originalX + 8.0) {
-      sendKettle(65);
+      sendKettleTemp(65);
+	  sendServer(65);
     }
     else if(compassX > originalX + 4.0) {
-      sendKettle(80);
+      sendKettleTemp(80);
+      sendServer(80);
     }
     else if(compassX < originalX - 8.0) {
-      sendKettle(100);
+      sendKettleTemp(100);
+      sendServer(100);
     }
     else if(compassX < originalX - 4.0) {
-      sendKettle(95);
+      sendKettleTemp(95);
+      sendServer(95);
     }
 
     //Particle.publish("new", compassString, PRIVATE);
@@ -266,8 +271,26 @@ void loop(void)
     //delay(1000);
 }
 
+//Tell the server when and where motion/sound was detected
+void sendServer(int winner)
+{
+  String send = winner + "," + Time.timeStr();
+
+  //post string data into the server directly
+
+  Serial.println("about to send post request"); //debug
+
+  client.println("POST /webapp/senddoor HTTP/1.1");
+  client.println("HOST: sccug-330-03.lancs.ac.uk");
+  client.print("Content-Length: ");
+  client.println(send.length());
+  client.println("Content-Type: text/plain");
+  client.println();
+  client.println(send);
+}
+
 //sends the string to the kettle to change the temperature to the correct value
-void sendKettle(int temp)
+void sendKettleTemp(int temp)
 {
   String kettleTemps[4];
   kettleTemps[0] = "set sys output 0x200";  //65 degrees
@@ -291,6 +314,40 @@ void sendKettle(int temp)
     else if (temp == 100) {
       Particle.publish("100 Degrees", kettleTemps[3], PRIVATE);
       kettleTCP.println(kettleTemps[3]);
+    }
+  }
+  else {
+    Particle.publish("connection failed", "connectionFailed", PUBLIC);
+  }
+}
+
+void sendKettleOnDoor(const char *event, const char *data)
+{
+  String winner = data;
+
+  String kettleOn = "set sys output 0x4";
+
+  if (kettleTCP.connect(kettleIP, kettlePort)) {
+    if (winner.equals("ENTERING")) {
+      Particle.publish("Kettle on", kettleOn, PUBLIC);
+      kettleTCP.println(kettleOn);
+    }
+  }
+  else {
+    Particle.publish("connection failed", "connectionFailed", PUBLIC);
+  }
+}
+
+void sendKettleOnCup(const char *event, const char *data)
+{
+  String refill = event;
+
+  String kettleOn = "set sys output 0x4";
+
+  if (kettleTCP.connect(kettleIP, kettlePort)) {
+    if (refill.equals("Entering")) {
+      Particle.publish("Kettle on", kettleOn, PUBLIC);
+      kettleTCP.println(kettleOn);
     }
   }
   else {
