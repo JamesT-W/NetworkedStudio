@@ -81,6 +81,7 @@ double tm; //// Celsius
 float initialTiltX = 0;
 //float initialTiltY = 0;
 int oldXTiltValue = 0;  //the xTiltValue stored at the end of the loop for the next loop
+bool firstLoop = true;
 
 //float newAccelX = 0;
 //float newAccelY = 0;
@@ -279,28 +280,34 @@ void loop(void)
         int emptyXTiltValue = round(emptyXTiltFraction/1)*1;  //rounds the float to an int to remove the decimal places
 
         //if the sound levels have increased by a set threshold, and the cup is tilted upright
-        if(soundValue > soundState + 500 && emptyXTiltValue >= 95 && emptyXTiltValue <= 105)
+        if(soundValue > soundState + 250 && emptyXTiltValue >= 95 && emptyXTiltValue <= 105)
         {
           Serial.println("SOUND DETECTED!");
           calibration = true;
-          delay(2000); //delay 2 seconds before next calibration, to make sure we're back to ambient sound levels
+          delay(1000); //delay 2 seconds before next calibration, to make sure we're back to ambient sound levels
 
-          sendServer("100");
+          //sendServer("100");
           XTiltValue = 100; //breaks out of the while loop
           Particle.publish("Refilled!", percentFull, PRIVATE);
         }
-        delay(1000);
+        delay(100);
       }
-      percentFull = XTiltValue;
+    }
+
+    percentFull = XTiltValue;
+
+    if (firstLoop) {
+      Particle.publish("Percent Full", percentFull, PRIVATE);
+      firstLoop = false;
+    }
+    if (XTiltValue != oldXTiltValue && firstLoop == false) {
+      Particle.publish("Percent Full", percentFull, PRIVATE);
+      sendServer(percentFull);
     }
 
     oldXTiltValue = XTiltValue; //the next loop uses this loop's XTilt value in comparisons
 
-    percentFull = XTiltValue;
-    Particle.publish("Percent Full", percentFull, PRIVATE);
-    sendServer(percentFull);
-
-    delay(1500);
+    delay(500);
 
     // Power Down Sensors
     //digitalWrite(I2CEN, LOW);
