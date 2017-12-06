@@ -263,27 +263,35 @@ void loop(void)
       XTiltValue = oldXTiltValue;
     }
 
-    //if the cup is empty, stay empty until refilled (it refills when a loud sound is made)
-    while (XTiltValue == 0) {
-      soundValue = measure(); //measure sound, check if its more than ambient sound level (within threshold)
+    //if the cup is empty
+    if (XTiltValue == 0) {
+      percentFull = XTiltValue; //XTiltValue == 0 here
+      Particle.publish("Empty", percentFull, PRIVATE);
+      sendServer(percentFull);
 
-      if(soundValue > soundState + 500) //if the sound levels have increased by a set threshold
-      {
-        Serial.println("SOUND DETECTED!");
-        calibration = true;
-        delay(2000); //delay 2 seconds before next calibration, to make sure we're back to ambient sound levels
+      //if the cup is empty, stay empty until refilled (it refills when a loud sound is made)
+      while (XTiltValue == 0) {
+        soundValue = measure(); //measure sound, check if its more than ambient sound level (within threshold)
+        readMPU9150();          //// reads compass, accelerometer and gyroscope data
 
-        percentFull = 100;
-        Particle.publish("Refilled!", percentFull, PRIVATE);
-        XTiltValue = 100; //breaks out of the while loop
-        sendServer("100");
-      }
-      else {
-        percentFull = XTiltValue; //XTiltValue == 0 here
-        Particle.publish("Empty", percentFull, PRIVATE);
-        sendServer(percentFull);
+        float emptynewTiltX = getXTilt(ax, az);
+        float emptyXTiltFraction = (emptynewTiltX / initialTiltX) * 100; //turn 360 degrees into percentage (90 degrees (vertically upright) = 100%)
+        int emptyXTiltValue = round(emptyXTiltFraction/1)*1;  //rounds the float to an int to remove the decimal places
+
+        //if the sound levels have increased by a set threshold, and the cup is tilted upright
+        if(soundValue > soundState + 500 && emptyXTiltValue >= 95 && emptyXTiltValue <= 105)
+        {
+          Serial.println("SOUND DETECTED!");
+          calibration = true;
+          delay(2000); //delay 2 seconds before next calibration, to make sure we're back to ambient sound levels
+
+          sendServer("100");
+          XTiltValue = 100; //breaks out of the while loop
+          Particle.publish("Refilled!", percentFull, PRIVATE);
+        }
         delay(1000);
       }
+      percentFull = XTiltValue;
     }
 
     oldXTiltValue = XTiltValue; //the next loop uses this loop's XTilt value in comparisons
@@ -292,7 +300,7 @@ void loop(void)
     Particle.publish("Percent Full", percentFull, PRIVATE);
     sendServer(percentFull);
 
-    delay(500);
+    delay(1500);
 
     // Power Down Sensors
     //digitalWrite(I2CEN, LOW);
