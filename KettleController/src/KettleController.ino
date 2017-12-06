@@ -251,7 +251,7 @@ void loop(void)
     //determines which temp value it should send depending on how much the photon has been tilted and in which direction
     if(compassX > originalX + 8.0) {
       sendKettleTemp(65);
-	  sendServer(65);
+      sendServer(65);
     }
     else if(compassX > originalX + 4.0) {
       sendKettleTemp(80);
@@ -272,15 +272,15 @@ void loop(void)
 }
 
 //Tell the server when and where motion/sound was detected
-void sendServer(int winner)
+void sendServer(int setTemp)
 {
-  String send = winner + "," + Time.timeStr();
+  String send = setTemp + "," + Time.timeStr();
 
   //post string data into the server directly
 
   Serial.println("about to send post request"); //debug
 
-  client.println("POST /webapp/senddoor HTTP/1.1");
+  client.println("POST /webapp/sendkettle HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
   client.print("Content-Length: ");
   client.println(send.length());
@@ -344,7 +344,7 @@ void sendKettleOnCup(const char *event, const char *data)
 {
   String refill = data;
 
-  String kettleOn = "set sys output 0x4"
+  String kettleOn = "set sys output 0x4";
 
   if (kettleTCP.connect(kettleIP, kettlePort)) {
     if (refill.equals("0")) {
