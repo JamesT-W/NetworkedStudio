@@ -142,7 +142,7 @@ void setup()
     digitalWrite(LED, LOW);       // Turns LED OFF, i.e. start by assuming no motion
 
     minute = Time.minute();  //Returns hour as an int (0-23). Used to only take environment readings every hour.
-    Serial.println(String(minute);
+    Serial.println(minute);
 
     blinkYellow.setActive(true);
     connectVM();
@@ -154,6 +154,7 @@ void connectVM(){
   if(client.connect(serverURL, serverPort))
   {
     blinkYellow.setActive(false);
+    Serial.println("Connection to server established");
   }
   noInterrupts();
 }
@@ -208,7 +209,6 @@ void loop(void)
   if(client.connected() != true)
   {
     blinkYellow.setActive(true);
-    Serial.println("Connection to server lost");
     connectVM();
   }
 
@@ -270,10 +270,11 @@ void loop(void)
  readWeatherSi1132();
  readWeatherSi7020();
 
-   if(minute != time.minute())
-   {
-     sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
-   }
+ int newtime = Time.minute();
+ if(minute != newtime)
+ {
+   sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
+ }
 
 }
 
