@@ -265,6 +265,13 @@ void loop(void)
  int newminute = Time.minute();
  if(minute != newminute)
  {
+   int counter = 0;
+   while(Si1132Visible == 0 || Si1132Visible > 100.0 || counter < 9)    //keep reading the light sensor untill the result actually makes sense, stop trying after a while
+   {
+     counter++;
+     readWeatherSi1132();
+     delay(100);
+   }
    sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
    Serial.println(Si1132Visible);
  }
