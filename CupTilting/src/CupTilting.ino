@@ -267,7 +267,7 @@ void loop(void)
     //if the cup is empty
     if (XTiltValue == 0) {
       percentFull = XTiltValue; //XTiltValue == 0 here
-      Particle.publish("Empty", percentFull, PRIVATE);
+      Particle.publish("Empty", percentFull, PUBLIC);
       sendServer(percentFull);
 
       //if the cup is empty, stay empty until refilled (it refills when a loud sound is made)
@@ -288,7 +288,7 @@ void loop(void)
 
           //sendServer("100");
           XTiltValue = 100; //breaks out of the while loop
-          Particle.publish("Refilled!", percentFull, PRIVATE);
+          Particle.publish("Refilled!", percentFull, PUBLIC);
         }
         delay(100);
       }
@@ -297,11 +297,11 @@ void loop(void)
     percentFull = XTiltValue;
 
     if (firstLoop) {
-      Particle.publish("Percent Full", percentFull, PRIVATE);
+      Particle.publish("Percent Full", percentFull, PUBLIC);
       firstLoop = false;
     }
     if (XTiltValue != oldXTiltValue && firstLoop == false) {
-      Particle.publish("Percent Full", percentFull, PRIVATE);
+      Particle.publish("Percent Full", percentFull, PUBLIC);
       sendServer(percentFull);
     }
 
