@@ -99,7 +99,7 @@ const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
 const int serverPort = 80;  //port
 
 TCPClient kettleTCP;  //used to connect to the server
-const char kettleIP[] = "192.168.0.101"; //ip address
+const char kettleIP[] = "192.168.0.103"; //ip address
 const int kettlePort = 2000;  //port
 
 LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
@@ -300,19 +300,19 @@ void sendKettleTemp(int temp)
 
   if (kettleTCP.connect(kettleIP, kettlePort)) {
     if (temp == 65) {
-      Particle.publish("65 Degrees", kettleTemps[0], PRIVATE);
+      Particle.publish("65 Degrees", kettleTemps[0], PUBLIC);
       kettleTCP.println(kettleTemps[0]);
     }
     else if (temp == 80) {
-      Particle.publish("80 Degrees", kettleTemps[1], PRIVATE);
+      Particle.publish("80 Degrees", kettleTemps[1], PUBLIC);
       kettleTCP.println(kettleTemps[1]);
     }
     else if (temp == 95) {
-      Particle.publish("95 Degrees", kettleTemps[2], PRIVATE);
+      Particle.publish("95 Degrees", kettleTemps[2], PUBLIC);
       kettleTCP.println(kettleTemps[2]);
     }
     else if (temp == 100) {
-      Particle.publish("100 Degrees", kettleTemps[3], PRIVATE);
+      Particle.publish("100 Degrees", kettleTemps[3], PUBLIC);
       kettleTCP.println(kettleTemps[3]);
     }
   }
@@ -344,7 +344,7 @@ void sendKettleOnCup(const char *event, const char *data)
 {
   String refill = data;
 
-  String kettleOn = "set sys output 0x4";
+  String kettleOn = "set sys output 0x4"
 
   if (kettleTCP.connect(kettleIP, kettlePort)) {
     if (refill.equals("0")) {
