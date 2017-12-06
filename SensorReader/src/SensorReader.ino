@@ -13,7 +13,7 @@
 
 
 int minute = 0; //Current minute, used to post environment every minute
-const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
+const String key = "1"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -269,12 +269,18 @@ void loop(void)
 
  readWeatherSi1132();
  readWeatherSi7020();
-
  int newtime = Time.minute();
  if(minute != newtime)
  {
+   while(Si1132Visible == 0 || Si1132Visible > 100.0)    //keep reading the light sensor untill the result actually makes sense
+   {
+     readWeatherSi1132();
+     delay(100);
+   }
    sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
  }
+
+ Serial.println(Si1132Visible);
 
 }
 
