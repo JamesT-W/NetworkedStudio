@@ -161,8 +161,8 @@ void setup()
     originalZ = getCompassZ(cz);
 
     //blinkYellow.setActive(true);
-	Particle.subscribe("Kettle On (Door)", sendKettleOnDoor);
-	Particle.subscribe("Kettle On (Cup)", sendKettleOnCup);
+	Particle.subscribe("ENTERING", sendKettleOnDoor);
+	Particle.subscribe("Empty", sendKettleOnCup);
     //connectVM();
 }
 
@@ -319,6 +319,8 @@ void sendKettleTemp(int temp)
   else {
     Particle.publish("connection failed", "connectionFailed", PUBLIC);
   }
+
+  delay(500);
 }
 
 void sendKettleOnDoor(const char *event, const char *data)
@@ -340,12 +342,12 @@ void sendKettleOnDoor(const char *event, const char *data)
 
 void sendKettleOnCup(const char *event, const char *data)
 {
-  String refill = event;
+  String refill = data;
 
   String kettleOn = "set sys output 0x4";
 
   if (kettleTCP.connect(kettleIP, kettlePort)) {
-    if (refill.equals("Entering")) {
+    if (refill.equals("0")) {
       Particle.publish("Kettle on", kettleOn, PUBLIC);
       kettleTCP.println(kettleOn);
     }
