@@ -12,8 +12,7 @@
 #define ACCEL_SCALE 2 // +/- 2g
 
 
-int Hour = 0; //Current hour (0-23)
-
+int minute = 0; //Current minute, used to post environment every minute
 const String key = "3"; //Lab zone indicator, used to recognise which device is in which zone. Update this according to whatever your zone is.
 
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
@@ -142,8 +141,8 @@ void setup()
     pinMode(inputPin, INPUT);     // Sets inputPin as an INPUT
     digitalWrite(LED, LOW);       // Turns LED OFF, i.e. start by assuming no motion
 
-    Hour = Time.hour() - 1;  //Returns hour as an int (0-23). Used to only take environment readings every hour.
-    Serial.println(String(Hour));
+    minute = Time.minute();  //Returns hour as an int (0-23). Used to only take environment readings every hour.
+    Serial.println(String(minute);
 
     blinkYellow.setActive(true);
     connectVM();
@@ -271,8 +270,10 @@ void loop(void)
  readWeatherSi1132();
  readWeatherSi7020();
 
- sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
- Serial.println(Si1132Visible);
+   if(minute != time.minute())
+   {
+     sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
+   }
 
 }
 
