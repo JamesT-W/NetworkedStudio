@@ -11,13 +11,6 @@
 #define PI 3.1415926535
 #define ACCEL_SCALE 2 // +/- 2g
 
-//SERVER CONNECTION
-TCPClient client;  //used to connect to the server
-const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
-const int serverPort = 80;  //port
-
-LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
-
 int PUBLISH_DELAY = 400; //adds a delay to make publishing less frequent
 int SLEEP_DELAY = 30000; //adds a delay after publishing so that the following publishes print correctly (ms)
 long PHOTON_SLEEP = 1800; // Seconds X2
@@ -94,6 +87,13 @@ int soundState = 0; //initial measurement
 int soundValue = 0; //second measurement to be compared
 bool calibration = true;
 
+//SERVER CONNECTION
+TCPClient client;  //used to connect to the server
+const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
+const int serverPort = 80;  //port
+
+LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
+
 //// ***************************************************************************
 
 //// SYSTEM_MODE(SEMI_AUTOMATIC);
@@ -168,6 +168,7 @@ void connectVM(){
   if(client.connect(serverURL, serverPort))
   {
     blinkYellow.setActive(false);
+    Serial.println("Connection to server established");
   }
   noInterrupts();
 }
@@ -217,21 +218,22 @@ void loop(void)
     digitalWrite(ALGEN, HIGH);
 
     delay(SENSORDELAY);     //// allows sensors time to warm up
-    readMPU9150();          //// reads compass, accelerometer and gyroscope data
+
     interrupts();
+
     if(client.connected() != true)
     {
       blinkYellow.setActive(true);
-      Serial.println("Connection to server lost");
       connectVM();
     }
-
     //Calibrate sound, measure ambient noise levels
     if(calibration) {
       soundState = measure();
       Serial.println("Calibrated!");
       calibration = false;
     }
+
+    readMPU9150();          //// reads compass, accelerometer and gyroscope data
 
     newTiltX = getXTilt(ax, az);
 
@@ -275,6 +277,8 @@ void loop(void)
         soundValue = measure(); //measure sound, check if its more than ambient sound level (within threshold)
         readMPU9150();          //// reads compass, accelerometer and gyroscope data
 
+        Particle.publish("0", percentFull, PUBLIC);
+
         float emptynewTiltX = getXTilt(ax, az);
         float emptyXTiltFraction = (emptynewTiltX / initialTiltX) * 100; //turn 360 degrees into percentage (90 degrees (vertically upright) = 100%)
         int emptyXTiltValue = round(emptyXTiltFraction/1)*1;  //rounds the float to an int to remove the decimal places
@@ -301,14 +305,14 @@ void loop(void)
       sendServerPer(percentFull);
       firstLoop = false;
     }
-    else if (XTiltValue != oldXTiltValue && firstLoop == false) {
+    else if (firstLoop == false) {
       Particle.publish("Percent Full", percentFull, PUBLIC);
       sendServerPer(percentFull);
     }
 
     oldXTiltValue = XTiltValue; //the next loop uses this loop's XTilt value in comparisons
 
-    delay(500);
+    delay(1500);
 
     // Power Down Sensors
     //digitalWrite(I2CEN, LOW);
@@ -336,11 +340,12 @@ void sendServerPer(String str)
 //Tell the server empty or refill for the graph
 void sendServerHy(String str)
 {
-  String send = str + "," + Time.timeStr();
+  String send = str + "," + Time.now();
+  Particle.publish("Hy entered", send, PUBLIC);
 
   //post string data into the server directly
 
-  Serial.println("about to send cup fill percent " +send); //debug
+  Serial.println("about to send cup Empty or Refill " +send); //debug
 
   client.println("POST /webapp/sendhy HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
