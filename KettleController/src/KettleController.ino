@@ -253,22 +253,22 @@ void loop(void)
     //determines which temp value it should send depending on how much the photon has been tilted and in which direction
     if(compassX > originalX + 8.0 && previousTemp != 65) {
       sendKettleTemp(65);
-      sendServer(65);
+      sendServer("65");
       previousTemp = 65;
     }
     else if(compassX > originalX + 4.0 && previousTemp != 80) {
       sendKettleTemp(80);
-      sendServer(80);
+      sendServer("80");
       previousTemp = 80;
     }
     else if(compassX < originalX - 8.0 && previousTemp != 100) {
       sendKettleTemp(100);
-      sendServer(100);
+      sendServer("100");
       previousTemp = 100;
     }
     else if(compassX < originalX - 4.0 && previousTemp != 95) {
       sendKettleTemp(95);
-      sendServer(95);
+      sendServer("95");
       previousTemp = 95;
     }
 
@@ -278,13 +278,12 @@ void loop(void)
 }
 
 //Tell the server when and where motion/sound was detected
-void sendServer(int setTemp)
+void sendServer(String send)
 {
-  String send = setTemp + "," + Time.timeStr();
-
   //post string data into the server directly
-
   Serial.println("about to send post request"); //debug
+
+  Serial.println(send);
 
   client.println("POST /webapp/sendkettle HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
