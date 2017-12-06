@@ -104,6 +104,8 @@ const int kettlePort = 2000;  //port
 
 LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
 
+int previousTemp = 0;
+
 //// ***************************************************************************
 //// ***************************************************************************
 
@@ -249,21 +251,25 @@ void loop(void)
     originalCompassString = originalCompassString+"X: "+originalX+" Y: "+originalY+" Z: "+originalZ;
 
     //determines which temp value it should send depending on how much the photon has been tilted and in which direction
-    if(compassX > originalX + 8.0) {
+    if(compassX > originalX + 8.0 && previousTemp != 65) {
       sendKettleTemp(65);
       sendServer(65);
+      previousTemp = 65;
     }
-    else if(compassX > originalX + 4.0) {
+    else if(compassX > originalX + 4.0 && previousTemp != 80) {
       sendKettleTemp(80);
       sendServer(80);
+      previousTemp = 80;
     }
-    else if(compassX < originalX - 8.0) {
+    else if(compassX < originalX - 8.0 && previousTemp != 100) {
       sendKettleTemp(100);
       sendServer(100);
+      previousTemp = 100;
     }
-    else if(compassX < originalX - 4.0) {
+    else if(compassX < originalX - 4.0 && previousTemp != 95) {
       sendKettleTemp(95);
       sendServer(95);
+      previousTemp = 95;
     }
 
     //Particle.publish("new", compassString, PRIVATE);
@@ -323,33 +329,41 @@ void sendKettleTemp(int temp)
   delay(500);
 }
 
+//tells myHandler that the Door is turning the Kettle on
 void sendKettleOnDoor(const char *event, const char *data)
 {
-  String winner = data;
+  myHandler("Door");
+}
+
+//tells myHandler that the Cup is turning the Kettle on
+void sendKettleOnCup(const char *event, const char *data)
+{
+  myHandler("Cup");
+}
+
+//Turns the Kettle on
+void myHandler(String triggeredBy)
+{
+  /* Particle.subscribe handlers are void functions, which means they don't return anything.
+  They take two variables-- the name of your event, and any data that goes along with your event.
+  */
+  Serial.println("in loop");
 
   String kettleOn = "set sys output 0x4";
 
   if (kettleTCP.connect(kettleIP, kettlePort)) {
-    if (winner.equals("ENTERING")) {
+    if (triggeredBy.equals("Door")) {
+      Serial.println("Door triggered kettle on!");
       Particle.publish("Kettle on", kettleOn, PUBLIC);
       kettleTCP.println(kettleOn);
     }
-  }
-  else {
-    Particle.publish("connection failed", "connectionFailed", PUBLIC);
-  }
-}
-
-void sendKettleOnCup(const char *event, const char *data)
-{
-  String refill = data;
-
-  String kettleOn = "set sys output 0x4";
-
-  if (kettleTCP.connect(kettleIP, kettlePort)) {
-    if (refill.equals("0")) {
+    else if (triggeredBy.equals("Cup")) {
+      Serial.println("Cup triggered kettle on!");
       Particle.publish("Kettle on", kettleOn, PUBLIC);
       kettleTCP.println(kettleOn);
+    }
+    else {
+      Serial.print("Winner is not Door or Cup");
     }
   }
   else {
