@@ -268,7 +268,7 @@ void loop(void)
     if (XTiltValue == 0) {
       percentFull = XTiltValue; //XTiltValue == 0 here
       Particle.publish("Empty", percentFull, PUBLIC);
-      sendServer(percentFull);
+      sendServerHy("Empty");
 
       //if the cup is empty, stay empty until refilled (it refills when a loud sound is made)
       while (XTiltValue == 0) {
@@ -286,7 +286,7 @@ void loop(void)
           calibration = true;
           delay(1000); //delay 2 seconds before next calibration, to make sure we're back to ambient sound levels
 
-          //sendServer("100");
+          sendServerHy("Refill");
           XTiltValue = 100; //breaks out of the while loop
           Particle.publish("Refilled!", percentFull, PUBLIC);
         }
@@ -298,11 +298,12 @@ void loop(void)
 
     if (firstLoop) {
       Particle.publish("Percent Full", percentFull, PUBLIC);
+      sendServerPer(percentFull);
       firstLoop = false;
     }
-    if (XTiltValue != oldXTiltValue && firstLoop == false) {
+    else if (XTiltValue != oldXTiltValue && firstLoop == false) {
       Particle.publish("Percent Full", percentFull, PUBLIC);
-      sendServer(percentFull);
+      sendServerPer(percentFull);
     }
 
     oldXTiltValue = XTiltValue; //the next loop uses this loop's XTilt value in comparisons
@@ -314,9 +315,8 @@ void loop(void)
     //digitalWrite(ALGEN, LOW);
 }
 
-
-//Tell the server when and where motion/sound was detected
-void sendServer(String str)
+//Tell the server water precentage levels
+void sendServerPer(String str)
 {
   String send = str + String('%');
 
@@ -325,6 +325,24 @@ void sendServer(String str)
   Serial.println("about to send cup fill percent " +send); //debug
 
   client.println("POST /webapp/sendper HTTP/1.1");
+  client.println("HOST: sccug-330-03.lancs.ac.uk");
+  client.print("Content-Length: ");
+  client.println(send.length());
+  client.println("Content-Type: text/plain");
+  client.println();
+  client.println(send);
+}
+
+//Tell the server empty or refill for the graph
+void sendServerHy(String str)
+{
+  String send = str + "," + Time.timeStr();
+
+  //post string data into the server directly
+
+  Serial.println("about to send cup fill percent " +send); //debug
+
+  client.println("POST /webapp/sendhy HTTP/1.1");
   client.println("HOST: sccug-330-03.lancs.ac.uk");
   client.print("Content-Length: ");
   client.println(send.length());
