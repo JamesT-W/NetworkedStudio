@@ -201,7 +201,7 @@ void loop(void)
 {
   digitalWrite(I2CEN, HIGH);
   digitalWrite(ALGEN, HIGH);
-  delay(500);
+  delay(1000);
 
   interrupts();
 
@@ -250,7 +250,7 @@ void loop(void)
 
   //measure sound, check if its more than ambient sound level (within threshold)
   soundValue = measure();
-  if(soundValue > soundState + 200)
+  if(soundValue > soundState + 500)
   {
     Serial.println("SOUND DETECTED!");
     sendServer("Sound");                //tell the server sound was detected
@@ -269,10 +269,10 @@ void loop(void)
    {
      readWeatherSi1132();
      delay(10);
+     Serial.println(Si1132Visible);
    }
    sendEnv(Si7020Temperature, Si7020Humidity, Si1132Visible); //send environment readings to server
  }
- Serial.println(Si1132Visible);
 
 }
 
