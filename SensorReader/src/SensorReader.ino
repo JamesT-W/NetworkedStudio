@@ -213,94 +213,20 @@ void loop(void)
     connectVM();
   }
 
-  //Calibrate sound, measure ambient noise levels
-  if(calibration)
-  {
-    soundState = measure();
-    Serial.println("Calibrated!");
-    calibration = false;
-  }
+  readMPU9150(); //// reads compass, accelerometer and gyroscope data
 
-/* MOTION DETECTION ONLY WORKS CORRECTLY IF A PIR MOTION SENSOR IS ATTACHED
-  msensorValue = digitalRead(inputPin);  // Reads sensor output connected to pin D6
-  if (msensorValue == HIGH)              // If the input pin is HIGH turn LED ON
-  {
-    digitalWrite(LED, HIGH);
-
-    if (msensorState == LOW) //Checks if sensor state has changed from its previous state
-     {
-       Serial.println("Motion has been detected!");    // If yes,  prints new state and
-       msensorState = HIGH;                            // preserves current sensor state
-
-       //This is the part that integrates with DoorSensor
-       String timestr = String(Time.now());
-       Serial.println(timestr);
-       Particle.publish("DOORINF", timestr, PUBLIC); //Used for door open checks
-
-       sendServer("Motion");          //tell the server motion was detected
-     }
-  }
-  else
-  {
-    digitalWrite(LED, LOW);                  // Turns LED OFF
-    if (msensorState == HIGH) //Checks if sensor state has changed from its previous state
-    {
-      Serial.println("No motion detected!");      // if yes, prints new state
-      msensorState = LOW;                    // preserves current sensor state
-    }
-  }
-  */
+  float pitch = getXTilt(ax, az);       //// returns device tilt along x-axis
+  float roll =  getYTilt(ay,az);        //// returns device tilt along y-axis
 
 
-  //measure sound, check if its more than ambient sound level (within threshold)
-  soundValue = measure();
-  if(soundValue > soundState + 500)
-  {
-    Serial.println("SOUND DETECTED!");
-    sendServer("Sound");                //tell the server sound was detected
-    calibration = true;
-    delay(5000); //delay 5 seconds before next calibration, to make sure we're back to ambient sound levels
+  float accelX = getAccelX(ax);         //// returns scaled acceleration along x axis
+  float accelY = getAccelY(ay);         //// returns scaled acceleration along y axis
+  float accelZ = getAccelZ(az);         //// returns scaled acceleration along y axis
+  float accelXYZ =  getAccelXYZ(ax, ay, az);   //returns the vector sum of the acceleration along x, y and z axes
 
-  }
-
-  /* Take averages of environment variables and send to server every hour
-  */
-
-  Serial.println("Printing environment variables.");
-
-  float averageHumidity, averageLight, averageTemp;
-  averageTemp = averageLight = averageHumidity = 0;
-
-  for(int i = 0; i < 10; i++) {
-    readWeatherSi1132();
-    readWeatherSi7020();
-    averageLight = averageLight + Si1132Visible;
-    averageTemp = averageTemp + Si7020Temperature;
-    averageHumidity = averageHumidity + Si7020Humidity;
-    delay(1000);
- }
-
-
- averageLight = averageLight / 10;
- averageTemp = averageTemp / 10;
- averageHumidity = averageHumidity / 10;
-
- /* Take averages of environment variables and send to server every hour
- */
- String blank = ""; //temporary
- //Get and publish Humidity
- String humidString = blank+"Humidity: "+averageHumidity;
- Particle.publish("Hdata:", humidString, PRIVATE);
-
- //Get and publish temperature
- String tempString = blank+"Temperature: "+averageTemp;
- Particle.publish("Tdata:", tempString, PRIVATE);
-
- //Get and publish light
- String lightString = blank+"Lightlevel: " +averageLight;
- Particle.publish("Ldata:", lightString, PRIVATE);
-
- sendEnv(averageTemp, averageHumidity, averageLight); //send environment readings to server
+  // Get and print X and Y Tilt
+  Serial.print("XTilt: "); Serial.print(getXTilt(ax, az)); Serial.print(" Degrees\t");
+  Serial.print("YTilt: "); Serial.print(getYTilt(ay, az)); Serial.println(" Degrees");
 
 }
 
