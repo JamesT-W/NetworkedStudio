@@ -88,6 +88,8 @@ TCPClient client;  //used to connect to the server
 const char serverURL[] = "sccug-330-03.lancs.ac.uk"; //ip address
 const int serverPort = 80;  //port
 
+bool Flat = true; //is the device flat or upright?
+
 LEDStatus blinkYellow(RGB_COLOR_YELLOW, LED_PATTERN_SOLID, LED_SPEED_SLOW);
 
 //// ***************************************************************************
@@ -213,6 +215,13 @@ void loop(void)
     connectVM();
   }
 
+  readTilt();
+  delay(1000);
+
+}
+
+void readTilt()
+{
   readMPU9150(); //// reads compass, accelerometer and gyroscope data
 
   float pitch = getXTilt(ax, az);       //// returns device tilt along x-axis
@@ -222,12 +231,33 @@ void loop(void)
   float accelX = getAccelX(ax);         //// returns scaled acceleration along x axis
   float accelY = getAccelY(ay);         //// returns scaled acceleration along y axis
   float accelZ = getAccelZ(az);         //// returns scaled acceleration along y axis
-  float accelXYZ =  getAccelXYZ(ax, ay, az);   //returns the vector sum of the acceleration along x, y and z axes
+  float accelXYZ = getAccelXYZ(ax, ay, az);   //returns the vector sum of the acceleration along x, y and z axes
 
   // Get and print X and Y Tilt
-  Serial.print("XTilt: "); Serial.print(getXTilt(ax, az)); Serial.print(" Degrees\t");
-  Serial.print("YTilt: "); Serial.print(getYTilt(ay, az)); Serial.println(" Degrees");
+  //Serial.print("XTilt: "); Serial.print(getXTilt(ax, az)); Serial.print(" Degrees\t");
+  //Serial.print("YTilt: "); Serial.print(getYTilt(ay, az)); Serial.println(" Degrees");
 
+  if(((getXTilt(ax, az)) > 359.0) || ((getXTilt(ax, az)) < 1.0))
+  {
+    Serial.println("I'm flat");
+    if(!Flat)
+    {
+      Serial.println("About to turn light off");
+      sendCmd(0); //tell server to turn lights off
+      Flat = true;
+    }
+  }
+
+  if(((getXTilt(ax, az)) > 270.0) && ((getXTilt(ax, az)) < 280))
+  {
+    Serial.println("I'm upright");
+    if(Flat)
+    {
+      Serial.println("About to turn light on");
+      sendCmd(1); //tell server to turn lights on
+      Flat = false;
+    }
+  }
 }
 
 
@@ -247,6 +277,28 @@ void sendServer(String str)
   client.println("Content-Type: text/plain");
   client.println();
   client.println(send);
+}
+
+//Sends all lights on or all lights off command to server (status 0 for off, 1 for on)
+void sendCmd(int status)
+{
+  if(status == 0)
+  {
+    Serial.println("telling server to turn lights off"); //debug
+
+    client.println("GET /webapp/lightsoff HTTP/1.1");
+    client.println("HOST: sccug-330-03.lancs.ac.uk");
+    client.println();
+
+  }else if(status == 1){
+    Serial.println("telling server to turn lights on"); //debug
+
+    client.println("GET /webapp/lightson HTTP/1.1");
+    client.println("HOST: sccug-330-03.lancs.ac.uk");
+    client.println();
+
+  }
+
 }
 
 void sendEnv(float avTemp, float avHumid, float avLight)
