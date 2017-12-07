@@ -289,13 +289,16 @@ void sendCmd(int status)
     client.println("GET /webapp/lightsoff HTTP/1.1");
     client.println("HOST: sccug-330-03.lancs.ac.uk");
     client.println();
+    client.flush();
 
-  }else if(status == 1){
+  }
+  if(status == 1){
     Serial.println("telling server to turn lights on"); //debug
 
     client.println("GET /webapp/lightson HTTP/1.1");
     client.println("HOST: sccug-330-03.lancs.ac.uk");
     client.println();
+    client.flush();
 
   }
 
