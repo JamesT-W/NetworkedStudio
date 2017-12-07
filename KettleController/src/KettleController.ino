@@ -163,7 +163,7 @@ void setup()
     originalZ = getCompassZ(cz);
 
     //blinkYellow.setActive(true);
-	Particle.subscribe("ENTERING", sendKettleOnDoor);
+	Particle.subscribe("Entering", sendKettleOnDoor);
 	Particle.subscribe("Empty", sendKettleOnCup);
     //connectVM();
 }
@@ -331,9 +331,7 @@ void sendKettleTemp(int temp)
 //tells myHandler that the Door is turning the Kettle on
 void sendKettleOnDoor(const char *event, const char *data)
 {
-  delay(500);
   Particle.publish("FIRST LOOP", data, PUBLIC);
-  delay(500);
   myHandler("Door");
 }
 
