@@ -31,6 +31,8 @@ byte I2CERR, I2CADR;
 
 //// ***************************************************************************
 //// ***************************************************************************
+int dataBorder1 = 0;
+int dataBorder2 = 0;
 
 int I2CEN = D2;
 int ALGEN = D3;
@@ -150,7 +152,27 @@ void setup()
     blinkYellow.setActive(true);
     connectVM();
 
+    Particle.subscribe("Border1/2:", BORDER1);
+    Particle.subscribe("Border2/3:", BORDER2);
+
 }
+
+void BORDER1(const char *event, const char *data) // const char *data
+{
+  String d1 = data;
+  d1.remove(0,6);
+  dataBorder1 = d1.toInt();
+  //Particle.publish("Data Border 1/2", dataBorder1, PRIVATE);
+}
+
+void BORDER2(const char *event, const char *data)
+{
+  String d2 = data;
+  d2.remove(0,6);
+  dataBorder2 = d2.toInt();
+  //Particle.publish("Data Border 2/3", dataBorder2, PRIVATE);
+}
+
 //attempt to connect to VMserver, blink red if unable to
 void connectVM(){
   interrupts();
@@ -208,18 +230,21 @@ void loop(void)
 
   interrupts();
 
+/*
   if(client.connected() != true)
   {
     blinkYellow.setActive(true);
     Serial.println("Connection to server lost");
     connectVM();
   }
+  */
+
+  findRSSI();
 
   readTilt();
   delay(1000);
 
 }
-
 void readTilt()
 {
   readMPU9150(); //// reads compass, accelerometer and gyroscope data
@@ -256,6 +281,61 @@ void readTilt()
       Serial.println("About to turn light on");
       sendCmd(1); //tell server to turn lights on
       Flat = false;
+    }
+  }
+}
+
+
+void findRSSI()
+{
+  int signalStrength = WiFi.RSSI();
+
+  String blank = ""; //temporary
+  Serial.println(signalStrength);
+  Serial.println(dataBorder1);
+  Serial.println(dataBorder2);
+  Serial.println("--------");
+  if(signalStrength != 2)
+  {
+    if(signalStrength < dataBorder1 && signalStrength < dataBorder2){
+      Serial.println("Im in zone 3");
+
+      String send = "zone3A";
+      client.println("POST /webapp/sendzone HTTP/1.1");
+      client.println("HOST: sccug-330-03.lancs.ac.uk");
+      client.print("Content-Length: ");
+      client.println(send.length());
+      client.println("Content-Type: text/plain");
+      client.println();
+      client.println(send);
+
+    }
+    else if(signalStrength < dataBorder1 && signalStrength > dataBorder2) {
+      Serial.println("Im in zone 2");
+
+      String send = "zone2B";
+
+      client.println("POST /webapp/sendzone HTTP/1.1");
+      client.println("HOST: sccug-330-03.lancs.ac.uk");
+      client.print("Content-Length: ");
+      client.println(send.length());
+      client.println("Content-Type: text/plain");
+      client.println();
+      client.println(send);
+    }
+    else if (signalStrength > dataBorder1 && signalStrength > dataBorder2){
+      Serial.println("Im in zone 1");
+
+      String send = "zone1A";
+      client.println("POST /webapp/sendzone HTTP/1.1");
+      client.println("HOST: sccug-330-03.lancs.ac.uk");
+      client.print("Content-Length: ");
+      client.println(send.length());
+      client.println("Content-Type: text/plain");
+      client.println();
+      client.println(send);
+    } else {
+      Serial.println("Error or border");
     }
   }
 }
