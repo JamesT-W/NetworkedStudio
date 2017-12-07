@@ -331,6 +331,9 @@ void sendKettleTemp(int temp)
 //tells myHandler that the Door is turning the Kettle on
 void sendKettleOnDoor(const char *event, const char *data)
 {
+  delay(500);
+  Particle.publish("FIRST LOOP", data, PUBLIC);
+  delay(500);
   myHandler("Door");
 }
 
@@ -349,6 +352,8 @@ void myHandler(String triggeredBy)
   Serial.println("in loop");
 
   String kettleOn = "set sys output 0x4";
+
+  Particle.publish("in loop", kettleOn, PUBLIC);
 
   if (kettleTCP.connect(kettleIP, kettlePort)) {
     if (triggeredBy.equals("Door")) {
