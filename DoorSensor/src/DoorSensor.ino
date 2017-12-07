@@ -359,12 +359,12 @@ void myHandler(String winner)
 
   if (winner.equals("ENTERING")) {
     Serial.println("ENTERING!");
-    Particle.publish("Entering detected", winner, PRIVATE);
+    Particle.publish("Entering", winner, PRIVATE);
     sendServer(winner);
   }
   else if (winner.equals("LEAVING")) {
     Serial.println("LEAVING!");
-    Particle.publish("Leaving detected", winner, PRIVATE);
+    Particle.publish("Leaving", winner, PRIVATE);
     sendServer(winner);
   }
   else {
