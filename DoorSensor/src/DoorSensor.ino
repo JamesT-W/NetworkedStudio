@@ -360,10 +360,12 @@ void myHandler(String winner)
   if (winner.equals("ENTERING")) {
     Serial.println("ENTERING!");
     Particle.publish("Entering detected", winner, PRIVATE);
+    sendServer(winner);
   }
   else if (winner.equals("LEAVING")) {
     Serial.println("LEAVING!");
     Particle.publish("Leaving detected", winner, PRIVATE);
+    sendServer(winner);
   }
   else {
     Serial.print("Winner is not ENTERING or LEAVING");
@@ -378,6 +380,8 @@ void sendServer(String winner)
   String send = winner + "," + Time.timeStr();
 
   //post string data into the server directly
+
+  Particle.publish("sending to server", winner, PUBLIC);
 
   Serial.println("about to send post request"); //debug
 
