@@ -268,8 +268,8 @@ void loop(void)
       //determines if the door has been moved
       if(compassX > originalX + 1.5 || compassY > originalY + 1.5 || compassZ > originalZ + 2.0) {
         digitalWrite(LED, HIGH);
-        //Particle.publish("Compass", compassString, PRIVATE);
-        //Particle.publish("OriginalCompass", originalCompassString, PRIVATE);
+        //Particle.publish("Compass", compassString, PUBLIC);
+        //Particle.publish("OriginalCompass", originalCompassString, PUBLIC);
         DOORCOMTIME = String(Time.now());
         DOORCOM(DOORCOMTIME);
         delay(1000);
@@ -303,7 +303,7 @@ void DOORINF(const char *event, const char *data)
 {
   //time no longer used
   DOORINFTIME = data;
-  //Particle.publish("Infrared moved: ", DOORINFTIME, PRIVATE);
+  //Particle.publish("Infrared moved: ", DOORINFTIME, PUBLIC);
 
   if (detectedInf == false) {
     detectedInf = true;
@@ -328,7 +328,7 @@ void DOORINF(const char *event, const char *data)
 void DOORCOM(String DOORCOMTIME)
 {
   //time no longer used
-  //Particle.publish("Compass moved: ", DOORCOMTIME, PRIVATE);
+  //Particle.publish("Compass moved: ", DOORCOMTIME, PUBLIC);
 
   if (detectedCom == false) {
     detectedCom = true;
@@ -359,12 +359,12 @@ void myHandler(String winner)
 
   if (winner.equals("ENTERING")) {
     Serial.println("ENTERING!");
-    Particle.publish("Entering", winner, PRIVATE);
+    Particle.publish("Entering", winner, PUBLIC);
     sendServer(winner);
   }
   else if (winner.equals("LEAVING")) {
     Serial.println("LEAVING!");
-    Particle.publish("Leaving", winner, PRIVATE);
+    Particle.publish("Leaving", winner, PUBLIC);
     sendServer(winner);
   }
   else {
