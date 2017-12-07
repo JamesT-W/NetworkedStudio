@@ -142,21 +142,6 @@ void setup()
     blinkYellow.setActive(true);
     connectVM();
 
-/*
-    int counter = 50;
-    for (int i=0; i<counter; i++) { //get's an average for the initial values
-      delay(100);
-      readMPU9150();          //// reads compass, accelerometer and gyroscope data
-
-      //initialAccelX += getAccelX(ax); initialAccelY += getAccelY(ay); initialAccelZ += getAccelZ(az);
-      //initialAccelXYZ +=  getAccelXYZ(ax, ay, az);
-      initialTiltX += getXTilt(ax,az);  //initialTiltY += getYTilt(ay,az);
-    }
-*/
-
-    //initialAccelX = initialAccelX / 50; initialAccelY = initialAccelY / 50; initialAccelZ = initialAccelZ / 50;
-    //initialAccelXYZ = initialAccelXYZ / 50;
-    //initialTiltX = initialTiltX / counter; //initialTiltY = initialTiltY / 50;
     initialTiltX = 90;
     oldXTiltValue = 100;
 
@@ -277,7 +262,7 @@ void loop(void)
         soundValue = measure(); //measure sound, check if its more than ambient sound level (within threshold)
         readMPU9150();          //// reads compass, accelerometer and gyroscope data
 
-        Particle.publish("0", percentFull, PUBLIC);
+        Particle.publish("Percent Full", percentFull, PUBLIC); //should be 0
 
         float emptynewTiltX = getXTilt(ax, az);
         float emptyXTiltFraction = (emptynewTiltX / initialTiltX) * 100; //turn 360 degrees into percentage (90 degrees (vertically upright) = 100%)
@@ -294,7 +279,7 @@ void loop(void)
           XTiltValue = 100; //breaks out of the while loop
           Particle.publish("Refilled!", percentFull, PUBLIC);
         }
-        delay(100);
+        delay(1000);
       }
     }
 
