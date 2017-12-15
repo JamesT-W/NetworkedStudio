@@ -163,8 +163,10 @@ void setup()
     originalZ = getCompassZ(cz);
 
     //blinkYellow.setActive(true);
-	Particle.subscribe("Entering", sendKettleOnDoor);
-	Particle.subscribe("Empty", sendKettleOnCup);
+
+    //Particle.subscribe("Entering", sendKettleOnDoor);
+	  //Particle.subscribe("Empty", sendKettleOnCup);
+
     //connectVM();
 }
 
@@ -251,30 +253,38 @@ void loop(void)
     originalCompassString = originalCompassString+"X: "+originalX+" Y: "+originalY+" Z: "+originalZ;
 
     //determines which temp value it should send depending on how much the photon has been tilted and in which direction
-    if(compassX > originalX + 8.0 && previousTemp != 65) {
-      sendKettleTemp(65);
-      sendServer(65);
-      previousTemp = 65;
+    if(compassX > originalX + 8.0) {
+      if (previousTemp != 65) {
+        sendKettleTemp(65);
+        sendServer(65);
+        previousTemp = 65;
+      }
     }
-    else if(compassX > originalX + 4.0 && previousTemp != 80) {
-      sendKettleTemp(80);
-      sendServer(80);
-      previousTemp = 80;
+    else if(compassX > originalX + 4.0) {
+      if (previousTemp != 80) {
+        sendKettleTemp(80);
+        sendServer(80);
+        previousTemp = 80;
+      }
     }
-    else if(compassX < originalX - 8.0 && previousTemp != 100) {
-      sendKettleTemp(100);
-      sendServer(100);
-      previousTemp = 100;
+    else if(compassX < originalX - 8.0) {
+      if (previousTemp != 100) {
+        sendKettleTemp(100);
+        sendServer(100);
+        previousTemp = 100;
+      }
     }
-    else if(compassX < originalX - 4.0 && previousTemp != 95) {
-      sendKettleTemp(95);
-      sendServer(95);
-      previousTemp = 95;
+    else if(compassX < originalX - 4.0) {
+      if (previousTemp != 95) {
+        sendKettleTemp(95);
+        sendServer(95);
+        previousTemp = 95;
+      }
     }
 
-    //Particle.publish("new", compassString, PRIVATE);
-    //Particle.publish("original", originalCompassString, PRIVATE);
-    //delay(1000);
+    Particle.publish("new", compassString, PRIVATE);
+    Particle.publish("original", originalCompassString, PRIVATE);
+    delay(1000);
 }
 
 //Tell the server the temperature value the kettle is set at
